@@ -2,6 +2,7 @@
 
 #include <istream>
 #include <vector>
+#include <cstdint>
 
 #include <openssl/evp.h>
 
