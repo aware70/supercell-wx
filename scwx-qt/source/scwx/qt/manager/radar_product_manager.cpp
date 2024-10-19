@@ -91,13 +91,7 @@ public:
                             const std::string&        radarId,
                             common::RadarProductGroup group,
                             const std::string&        product) :
-       radarId_ {radarId},
-       group_ {group},
-       product_ {product},
-       refreshEnabled_ {false},
-       refreshTimer_ {threadPool_},
-       refreshTimerMutex_ {},
-       provider_ {nullptr}
+       radarId_ {radarId}, group_ {group}, product_ {product}
    {
       connect(this,
               &ProviderManager::NewDataAvailable,
@@ -115,10 +109,10 @@ public:
    const std::string                             radarId_;
    const common::RadarProductGroup               group_;
    const std::string                             product_;
-   bool                                          refreshEnabled_;
-   boost::asio::steady_timer                     refreshTimer_;
-   std::mutex                                    refreshTimerMutex_;
-   std::shared_ptr<provider::NexradDataProvider> provider_;
+   bool                                          refreshEnabled_ {false};
+   boost::asio::steady_timer                     refreshTimer_ {threadPool_};
+   std::mutex                                    refreshTimerMutex_ {};
+   std::shared_ptr<provider::NexradDataProvider> provider_ {nullptr};
 
 signals:
    void NewDataAvailable(common::RadarProductGroup             group,
@@ -136,24 +130,8 @@ public:
        initialized_ {false},
        level3ProductsInitialized_ {false},
        radarSite_ {config::RadarSite::Get(radarId)},
-       coordinates0_5Degree_ {},
-       coordinates1Degree_ {},
-       level2ProductRecords_ {},
-       level2ProductRecentRecords_ {},
-       level3ProductRecordsMap_ {},
-       level3ProductRecentRecordsMap_ {},
-       level2ProductRecordMutex_ {},
-       level3ProductRecordMutex_ {},
        level2ProviderManager_ {std::make_shared<ProviderManager>(
-          self_, radarId_, common::RadarProductGroup::Level2)},
-       level3ProviderManagerMap_ {},
-       level3ProviderManagerMutex_ {},
-       initializeMutex_ {},
-       level3ProductsInitializeMutex_ {},
-       loadLevel2DataMutex_ {},
-       loadLevel3DataMutex_ {},
-       availableCategoryMap_ {},
-       availableCategoryMutex_ {}
+          self_, radarId_, common::RadarProductGroup::Level2)}
    {
       if (radarSite_ == nullptr)
       {
@@ -247,30 +225,30 @@ public:
    std::shared_ptr<config::RadarSite> radarSite_;
    std::size_t                        cacheLimit_ {6u};
 
-   std::vector<float> coordinates0_5Degree_;
-   std::vector<float> coordinates1Degree_;
+   std::vector<float> coordinates0_5Degree_ {};
+   std::vector<float> coordinates1Degree_ {};
 
-   RadarProductRecordMap  level2ProductRecords_;
-   RadarProductRecordList level2ProductRecentRecords_;
+   RadarProductRecordMap   level2ProductRecords_ {};
+   RadarProductRecordList  level2ProductRecentRecords_ {};
    std::unordered_map<std::string, RadarProductRecordMap>
-      level3ProductRecordsMap_;
+      level3ProductRecordsMap_ {};
    std::unordered_map<std::string, RadarProductRecordList>
-                     level3ProductRecentRecordsMap_;
-   std::shared_mutex level2ProductRecordMutex_;
-   std::shared_mutex level3ProductRecordMutex_;
+                     level3ProductRecentRecordsMap_ {};
+   std::shared_mutex level2ProductRecordMutex_ {};
+   std::shared_mutex level3ProductRecordMutex_ {};
 
    std::shared_ptr<ProviderManager> level2ProviderManager_;
    std::unordered_map<std::string, std::shared_ptr<ProviderManager>>
-                     level3ProviderManagerMap_;
-   std::shared_mutex level3ProviderManagerMutex_;
+                     level3ProviderManagerMap_ {};
+   std::shared_mutex level3ProviderManagerMutex_ {};
 
-   std::mutex initializeMutex_;
-   std::mutex level3ProductsInitializeMutex_;
-   std::mutex loadLevel2DataMutex_;
-   std::mutex loadLevel3DataMutex_;
+   std::mutex initializeMutex_ {};
+   std::mutex level3ProductsInitializeMutex_ {};
+   std::mutex loadLevel2DataMutex_ {};
+   std::mutex loadLevel3DataMutex_ {};
 
-   common::Level3ProductCategoryMap availableCategoryMap_;
-   std::shared_mutex                availableCategoryMutex_;
+   common::Level3ProductCategoryMap availableCategoryMap_ {};
+   std::shared_mutex                availableCategoryMutex_ {};
 
    std::unordered_map<boost::uuids::uuid,
                       std::shared_ptr<ProviderManager>,
