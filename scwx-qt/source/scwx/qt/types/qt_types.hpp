@@ -26,9 +26,10 @@ enum class UiStyle
    Fusion,
    FusionLight,
    FusionDark,
+   FusionQt6Ct,
    Unknown
 };
-typedef scwx::util::Iterator<UiStyle, UiStyle::Default, UiStyle::FusionDark>
+typedef scwx::util::Iterator<UiStyle, UiStyle::Default, UiStyle::FusionQt6Ct>
    UiStyleIterator;
 
 Qt::ColorScheme GetQtColorScheme(UiStyle uiStyle);

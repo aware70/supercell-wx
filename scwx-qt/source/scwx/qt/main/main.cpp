@@ -12,6 +12,7 @@
 #include <scwx/qt/settings/general_settings.hpp>
 #include <scwx/qt/types/qt_types.hpp>
 #include <scwx/qt/ui/setup/setup_wizard.hpp>
+#include <scwx/qt/util/qt6ct_palette.hpp>
 #include <scwx/network/cpr.hpp>
 #include <scwx/util/environment.hpp>
 #include <scwx/util/logger.hpp>
@@ -27,6 +28,8 @@
 #include <QStandardPaths>
 #include <QStyleHints>
 #include <QTranslator>
+#include <QPalette>
+#include <QStyle>
 
 static const std::string logPrefix_ = "scwx::main";
 static const auto        logger_    = scwx::util::Logger::Create(logPrefix_);
@@ -162,6 +165,15 @@ static void ConfigureTheme(const std::vector<std::string>& args)
    }
 
    QGuiApplication::styleHints()->setColorScheme(qtColorScheme);
+
+   if (uiStyle == scwx::qt::types::UiStyle::FusionQt6Ct)
+   {
+      auto palette =
+         std::make_unique<QPalette>(scwx::qt::util::qt6ct::loadColorScheme(
+            ":res/qt6ct_colors/darker.conf",
+            QApplication::style()->standardPalette()));
+      QApplication::setPalette(*palette);
+   }
 }
 
 static void

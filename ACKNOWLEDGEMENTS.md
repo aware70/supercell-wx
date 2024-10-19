@@ -35,6 +35,7 @@ Supercell Wx uses code from the following dependencies:
 | [nunicode](https://bitbucket.org/alekseyt/nunicode/src/master/) | [MIT License](https://spdx.org/licenses/MIT.html) | Modified for MapLibre Native |
 | [OpenSSL](https://www.openssl.org/) | [OpenSSL License](https://spdx.org/licenses/OpenSSL.html) |
 | [Qt](https://www.qt.io/) | [GNU Lesser General Public License v3.0 only](https://spdx.org/licenses/LGPL-3.0-only.html) | Qt Core, Qt GUI, Qt Multimedia, Qt Network, Qt OpenGL, Qt Positioning, Qt Serial Port, Qt SQL, Qt SVG, Qt Widgets<br/>Additional Licenses: https://doc.qt.io/qt-6/licenses-used-in-qt.html |
+| [qt6ct](https://github.com/trialuser02/qt6ct) | [BSD 2-Clause "Simplified" License](https://spdx.org/licenses/BSD-2-Clause.html) |
 | [re2](https://github.com/google/re2) | [BSD 3-Clause "New" or "Revised" License](https://spdx.org/licenses/BSD-3-Clause.html) |
 | [spdlog](https://github.com/gabime/spdlog) | [MIT License](https://spdx.org/licenses/MIT.html) |
 | [SQLite](https://www.sqlite.org/) | Public Domain |
@@ -67,6 +68,7 @@ Supercell Wx uses assets from the following sources:
 | [Font Awesome Free](https://fontawesome.com/) | CC BY 4.0 License |
 | [Inconsolata](https://fonts.google.com/specimen/Inconsolata) | SIL Open Font License |
 | [NOAA's Weather and Climate Toolkit](https://www.ncdc.noaa.gov/wct/) | Public Domain | Default Color Tables |
+| [qt6ct](https://github.com/trialuser02/qt6ct) | [BSD 2-Clause "Simplified" License](https://spdx.org/licenses/BSD-2-Clause.html) |
 | [Roboto Flex](https://fonts.google.com/specimen/Roboto+Flex) | SIL Open Font License |
 | [Supercell thunderstorm with dramatic clouds](https://www.shutterstock.com/image-photo/supercell-thunderstorm-dramatic-clouds-1354353521) | Shutterstock Standard License | Photo by John Sirlin
 

@@ -15,6 +15,7 @@ static const std::unordered_map<UiStyle, std::string> qtStyleName_ {
    {UiStyle::Fusion, "Fusion"},
    {UiStyle::FusionLight, "Fusion"},
    {UiStyle::FusionDark, "Fusion"},
+   {UiStyle::FusionQt6Ct, "Fusion"},
    {UiStyle::Unknown, "?"}};
 
 static const std::unordered_map<UiStyle, std::string> uiStyleName_ {
@@ -22,6 +23,7 @@ static const std::unordered_map<UiStyle, std::string> uiStyleName_ {
    {UiStyle::Fusion, "Fusion"},
    {UiStyle::FusionLight, "Fusion Light"},
    {UiStyle::FusionDark, "Fusion Dark"},
+   {UiStyle::FusionQt6Ct, "Fusion with qt6ct Palette"},
    {UiStyle::Unknown, "?"}};
 
 static const std::unordered_map<UiStyle, Qt::ColorScheme> qtColorSchemeMap_ {
@@ -29,6 +31,7 @@ static const std::unordered_map<UiStyle, Qt::ColorScheme> qtColorSchemeMap_ {
    {UiStyle::Fusion, Qt::ColorScheme::Unknown},
    {UiStyle::FusionLight, Qt::ColorScheme::Light},
    {UiStyle::FusionDark, Qt::ColorScheme::Dark},
+   {UiStyle::FusionQt6Ct, Qt::ColorScheme::Unknown},
    {UiStyle::Unknown, Qt::ColorScheme::Unknown}};
 
 SCWX_GET_ENUM(UiStyle, GetUiStyle, uiStyleName_)
