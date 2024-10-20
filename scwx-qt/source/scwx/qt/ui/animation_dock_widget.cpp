@@ -65,6 +65,8 @@ AnimationDockWidget::AnimationDockWidget(QWidget* parent) :
    QDateTime currentDateTime = QDateTime::currentDateTimeUtc();
    QDate     currentDate     = currentDateTime.date();
    QTime     currentTime     = currentDateTime.time();
+   currentTime               = currentTime.addSecs(-currentTime.second() + 59);
+
    ui->dateEdit->setDate(currentDate);
    ui->timeEdit->setTime(currentTime);
    ui->dateEdit->setMaximumDate(currentDateTime.date());
