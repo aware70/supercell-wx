@@ -65,7 +65,9 @@ public:
    std::map<std::uint16_t, std::shared_ptr<rda::ElevationScan>> radarData_ {};
 
    std::map<rda::DataBlockType,
-            std::map<std::uint16_t, std::shared_ptr<rda::ElevationScan>>>
+            std::map<std::uint16_t,
+                     std::map<std::chrono::system_clock::time_point,
+                              std::shared_ptr<rda::ElevationScan>>>>
       index_ {};
 
    std::list<std::stringstream> rawRecords_ {};
@@ -130,9 +132,9 @@ std::shared_ptr<const rda::VolumeCoveragePatternData> Ar2vFile::vcp_data() const
 }
 
 std::tuple<std::shared_ptr<rda::ElevationScan>, float, std::vector<float>>
-Ar2vFile::GetElevationScan(rda::DataBlockType dataBlockType,
-                           float              elevation,
-                           std::chrono::system_clock::time_point /*time*/) const
+Ar2vFile::GetElevationScan(rda::DataBlockType                    dataBlockType,
+                           float                                 elevation,
+                           std::chrono::system_clock::time_point time) const
 {
    logger_->debug("GetElevationScan: {} degrees", elevation);
 
@@ -152,6 +154,7 @@ Ar2vFile::GetElevationScan(rda::DataBlockType dataBlockType,
       std::uint16_t lowerBound = scans.cbegin()->first;
       std::uint16_t upperBound = scans.crbegin()->first;
 
+      // Find closest elevation match
       for (auto& scan : scans)
       {
          if (scan.first > lowerBound && scan.first <= codedElevation)
@@ -173,15 +176,25 @@ Ar2vFile::GetElevationScan(rda::DataBlockType dataBlockType,
          std::abs(static_cast<std::int32_t>(codedElevation) -
                   static_cast<std::int32_t>(upperBound));
 
-      if (lowerDelta < upperDelta)
+      // Select closest elevation match
+      std::uint16_t elevationIndex =
+         (lowerDelta < upperDelta) ? lowerBound : upperBound;
+      elevationCut = elevationIndex / scaleFactor;
+
+      // Select closest time match, not newer than the selected time
+      std::chrono::system_clock::time_point foundTime {};
+      auto& elevationScans = scans.at(elevationIndex);
+
+      for (auto& scan : elevationScans)
       {
-         elevationScan = scans.at(lowerBound);
-         elevationCut  = lowerBound / scaleFactor;
-      }
-      else
-      {
-         elevationScan = scans.at(upperBound);
-         elevationCut  = upperBound / scaleFactor;
+         auto& scanTime = scan.first;
+
+         if (elevationScan == nullptr ||
+             (scanTime <= time && scanTime > foundTime))
+         {
+            elevationScan = scan.second;
+            foundTime     = scanTime;
+         }
       }
    }
 
@@ -460,8 +473,8 @@ void Ar2vFileImpl::IndexFile()
          waveformType   = vcpData_->waveform_type(elevationCut.first);
       }
       else if ((digitalRadarData0 =
-                   std::dynamic_pointer_cast<rda::DigitalRadarData>(
-                      (*elevationCut.second)[0])) != nullptr)
+                   std::dynamic_pointer_cast<rda::DigitalRadarData>(radial0)) !=
+               nullptr)
       {
          elevationAngle = digitalRadarData0->elevation_angle_raw();
       }
@@ -488,8 +501,10 @@ void Ar2vFileImpl::IndexFile()
 
          if (momentData != nullptr)
          {
-            // TODO: Handle multiple elevation scans
-            index_[dataBlockType][elevationAngle] = elevationCut.second;
+            auto time = util::TimePoint(radial0->modified_julian_date(),
+                                        radial0->collection_time());
+
+            index_[dataBlockType][elevationAngle][time] = elevationCut.second;
          }
       }
    }
