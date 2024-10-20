@@ -20,12 +20,15 @@ public:
    explicit MarkerManager();
    ~MarkerManager();
 
-   size_t                   marker_count();
+   size_t                           marker_count();
    std::optional<types::MarkerInfo> get_marker(size_t index);
    void set_marker(size_t index, const types::MarkerInfo& marker);
    void add_marker(const types::MarkerInfo& marker);
    void remove_marker(size_t index);
    void move_marker(size_t from, size_t to);
+
+   // Only use for testing
+   void set_marker_settings_path(const std::string& path);
 
    static std::shared_ptr<MarkerManager> Instance();
 

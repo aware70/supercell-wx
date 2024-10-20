@@ -36,7 +36,7 @@ public:
    explicit Impl(MarkerManager* self) : self_ {self} {}
    ~Impl() { threadPool_.join(); }
 
-   std::string                                markerSettingsPath_ {};
+   std::string                                markerSettingsPath_ {""};
    std::vector<std::shared_ptr<MarkerRecord>> markerRecords_ {};
 
    MarkerManager* self_;
@@ -176,14 +176,13 @@ MarkerManager::Impl::GetMarkerByName(const std::string& name)
 
 MarkerManager::MarkerManager() : p(std::make_unique<Impl>(this))
 {
+   p->InitializeMarkerSettings();
 
    boost::asio::post(p->threadPool_,
                      [this]()
                      {
                         try
                         {
-                           p->InitializeMarkerSettings();
-
                            // Read Marker settings on startup
                            main::Application::WaitForInitialization();
                            p->ReadMarkerSettings();
@@ -292,6 +291,13 @@ void MarkerManager::move_marker(size_t from, size_t to)
    }
    Q_EMIT MarkersUpdated();
 }
+
+// Only use for testing
+void MarkerManager::set_marker_settings_path(const std::string& path)
+{
+   p->markerSettingsPath_ = path;
+}
+
 
 std::shared_ptr<MarkerManager> MarkerManager::Instance()
 {

@@ -44,6 +44,14 @@ void WaitForInitialization()
    }
 }
 
+// Only use for test cases
+void ResetInitilization()
+{
+   logger_->debug("Application initialization reset");
+   std::unique_lock lock(initializationMutex_);
+   initialized_ = false;
+}
+
 } // namespace Application
 } // namespace main
 } // namespace qt

@@ -11,6 +11,8 @@ namespace Application
 
 void FinishInitialization();
 void WaitForInitialization();
+// Only use for test cases
+void ResetInitilization();
 
 } // namespace Application
 } // namespace main
