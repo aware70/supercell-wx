@@ -254,6 +254,10 @@ bool MarkerModel::setData(const QModelIndex& index,
 
 void MarkerModel::HandleMarkersInitialized(size_t count)
 {
+   if (count == 0)
+   {
+      return;
+   }
    const int index = static_cast<int>(count - 1);
 
    beginInsertRows(QModelIndex(), 0, index);
