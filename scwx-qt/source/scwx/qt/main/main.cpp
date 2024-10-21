@@ -166,10 +166,24 @@ static void ConfigureTheme(const std::vector<std::string>& args)
 
    QGuiApplication::styleHints()->setColorScheme(qtColorScheme);
 
-   if (uiStyle == scwx::qt::types::UiStyle::FusionQt6Ct)
+   std::optional<std::string> paletteFile =
+      scwx::qt::types::GetQtPaletteFile(uiStyle);
+   if (paletteFile)
    {
-      QPalette palette = Qt6CT::loadColorScheme(":res/qt6ct_colors/darker.conf",
-            QApplication::style()->standardPalette());;
+      QPalette defaultPalette = QApplication::style()->standardPalette();
+      QPalette palette =
+         Qt6CT::loadColorScheme(QString::fromStdString(*paletteFile),
+                                defaultPalette);
+
+      if (defaultPalette == palette)
+      {
+         logger_->warn("Failed to load palette file '{}'", *paletteFile);
+      }
+      else
+      {
+         logger_->info("Loaded palette file '{}'", *paletteFile);
+      }
+
       QApplication::setPalette(palette);
    }
 }

@@ -2,6 +2,7 @@
 
 #include <scwx/util/iterator.hpp>
 
+#include <optional>
 #include <string>
 
 #include <Qt>
@@ -26,14 +27,21 @@ enum class UiStyle
    Fusion,
    FusionLight,
    FusionDark,
-   FusionQt6Ct,
+   FusionAiry,
+   FusionDarker,
+   FusionDusk,
+   FusionIaOra,
+   FusionSand,
+   FusionWaves,
    Unknown
 };
-typedef scwx::util::Iterator<UiStyle, UiStyle::Default, UiStyle::FusionQt6Ct>
+typedef scwx::util::Iterator<UiStyle, UiStyle::Default, UiStyle::FusionWaves>
    UiStyleIterator;
 
-Qt::ColorScheme GetQtColorScheme(UiStyle uiStyle);
-std::string     GetQtStyleName(UiStyle uiStyle);
+Qt::ColorScheme            GetQtColorScheme(UiStyle uiStyle);
+std::string                GetQtStyleName(UiStyle uiStyle);
+
+std::optional<std::string> GetQtPaletteFile(UiStyle uiStyle);
 
 UiStyle     GetUiStyle(const std::string& name);
 std::string GetUiStyleName(UiStyle uiStyle);
