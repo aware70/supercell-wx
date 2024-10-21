@@ -357,7 +357,6 @@ set(HDR_UTIL source/scwx/qt/util/color.hpp
              source/scwx/qt/util/texture_atlas.hpp
              source/scwx/qt/util/q_file_buffer.hpp
              source/scwx/qt/util/q_file_input_stream.hpp
-             source/scwx/qt/util/qt6ct_palette.hpp
              source/scwx/qt/util/time.hpp
              source/scwx/qt/util/tooltip.hpp)
 set(SRC_UTIL source/scwx/qt/util/color.cpp
@@ -370,7 +369,6 @@ set(SRC_UTIL source/scwx/qt/util/color.cpp
              source/scwx/qt/util/texture_atlas.cpp
              source/scwx/qt/util/q_file_buffer.cpp
              source/scwx/qt/util/q_file_input_stream.cpp
-             source/scwx/qt/util/qt6ct_palette.cpp
              source/scwx/qt/util/time.cpp
              source/scwx/qt/util/tooltip.cpp)
 set(HDR_VIEW source/scwx/qt/view/level2_product_view.hpp
@@ -687,6 +685,7 @@ target_link_libraries(scwx-qt PUBLIC Qt${QT_VERSION_MAJOR}::Widgets
                                      GLEW::GLEW
                                      glm::glm
                                      imgui
+                                     qt6ct-common
                                      SQLite::SQLite3
                                      wxdata)
 
