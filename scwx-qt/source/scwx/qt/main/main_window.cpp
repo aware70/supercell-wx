@@ -494,12 +494,11 @@ void MainWindow::on_actionOpenNexrad_triggered()
    map::MapWidget* currentMap = p->activeMap_;
 
    // Make sure the parent window properly repaints on close
-   connect(
-      dialog,
-      &QFileDialog::finished,
-      this,
-      [this]() { update(); },
-      Qt::QueuedConnection);
+   connect(dialog,
+           &QFileDialog::finished,
+           this,
+           static_cast<void (MainWindow::*)()>(&MainWindow::update),
+           Qt::QueuedConnection);
 
    connect(
       dialog,
@@ -560,12 +559,11 @@ void MainWindow::on_actionOpenTextEvent_triggered()
    dialog->setAttribute(Qt::WA_DeleteOnClose);
 
    // Make sure the parent window properly repaints on close
-   connect(
-      dialog,
-      &QFileDialog::finished,
-      this,
-      [this]() { update(); },
-      Qt::QueuedConnection);
+   connect(dialog,
+           &QFileDialog::finished,
+           this,
+           static_cast<void (MainWindow::*)()>(&MainWindow::update),
+           Qt::QueuedConnection);
 
    connect(dialog,
            &QFileDialog::fileSelected,
@@ -1003,7 +1001,8 @@ void MainWindowImpl::ConnectAnimationSignals()
            {
               for (auto map : maps_)
               {
-                 map->update();
+                 QMetaObject::invokeMethod(
+                    map, static_cast<void (QWidget::*)()>(&QWidget::update));
               }
            });
    connect(timelineManager_.get(),

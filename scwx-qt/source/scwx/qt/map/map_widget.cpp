@@ -357,7 +357,7 @@ void MapWidgetImpl::ConnectSignals()
    connect(placefileManager_.get(),
            &manager::PlacefileManager::PlacefileUpdated,
            widget_,
-           [this]() { widget_->update(); });
+           static_cast<void (QWidget::*)()>(&QWidget::update));
 
    // When the layer model changes, update the layers
    connect(layerModel_.get(),
@@ -903,7 +903,8 @@ void MapWidget::SelectTime(std::chrono::system_clock::time_point time)
 void MapWidget::SetActive(bool isActive)
 {
    p->context_->settings().isActive_ = isActive;
-   update();
+   QMetaObject::invokeMethod(
+      this, static_cast<void (QWidget::*)()>(&QWidget::update));
 }
 
 void MapWidget::SetAutoRefresh(bool enabled)
@@ -1026,7 +1027,8 @@ void MapWidget::UpdateMouseCoordinate(const common::Coordinate& coordinate)
       if (keyboardModifiers != Qt::KeyboardModifier::NoModifier ||
           keyboardModifiers != p->lastKeyboardModifiers_)
       {
-         update();
+         QMetaObject::invokeMethod(
+            this, static_cast<void (QWidget::*)()>(&QWidget::update));
       }
 
       p->lastKeyboardModifiers_ = keyboardModifiers;
@@ -1292,7 +1294,7 @@ void MapWidgetImpl::AddPlacefileLayer(const std::string& placefileName,
    connect(placefileLayer.get(),
            &PlacefileLayer::DataReloaded,
            widget_,
-           [this]() { widget_->update(); });
+           static_cast<void (QWidget::*)()>(&QWidget::update));
 }
 
 std::string
@@ -1319,7 +1321,7 @@ void MapWidgetImpl::AddLayer(const std::string&            id,
       connect(layer.get(),
               &GenericLayer::NeedsRendering,
               widget_,
-              [this]() { widget_->update(); });
+              static_cast<void (QWidget::*)()>(&QWidget::update));
    }
    catch (const std::exception&)
    {
@@ -1825,12 +1827,11 @@ void MapWidgetImpl::RadarProductViewConnect()
 
    if (radarProductView != nullptr)
    {
-      connect(
-         radarProductView.get(),
-         &view::RadarProductView::ColorTableLutUpdated,
-         this,
-         [this]() { widget_->update(); },
-         Qt::QueuedConnection);
+      connect(radarProductView.get(),
+              &view::RadarProductView::ColorTableLutUpdated,
+              widget_,
+              static_cast<void (QWidget::*)()>(&QWidget::update),
+              Qt::QueuedConnection);
       connect(
          radarProductView.get(),
          &view::RadarProductView::SweepComputed,
@@ -1863,7 +1864,7 @@ void MapWidgetImpl::RadarProductViewDisconnect()
    {
       disconnect(radarProductView.get(),
                  &view::RadarProductView::ColorTableLutUpdated,
-                 this,
+                 widget_,
                  nullptr);
       disconnect(radarProductView.get(),
                  &view::RadarProductView::SweepComputed,
@@ -1913,7 +1914,8 @@ void MapWidgetImpl::SetRadarSite(const std::string& radarSite)
 
 void MapWidgetImpl::Update()
 {
-   widget_->update();
+   QMetaObject::invokeMethod(
+      widget_, static_cast<void (QWidget::*)()>(&QWidget::update));
 
    if (UpdateStoredMapParameters())
    {
