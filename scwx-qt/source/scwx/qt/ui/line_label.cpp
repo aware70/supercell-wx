@@ -81,45 +81,57 @@ void LineLabel::set_border_width(std::size_t width)
 {
    p->borderWidth_ = width;
    p->pixmapDirty_ = true;
-   updateGeometry();
-   update();
+
+   QMetaObject::invokeMethod(this, &QWidget::updateGeometry);
+   QMetaObject::invokeMethod(
+      this, static_cast<void (QWidget::*)()>(&QWidget::update));
 }
 
 void LineLabel::set_highlight_width(std::size_t width)
 {
    p->highlightWidth_ = width;
    p->pixmapDirty_    = true;
-   updateGeometry();
-   update();
+
+   QMetaObject::invokeMethod(this, &QWidget::updateGeometry);
+   QMetaObject::invokeMethod(
+      this, static_cast<void (QWidget::*)()>(&QWidget::update));
 }
 
 void LineLabel::set_line_width(std::size_t width)
 {
    p->lineWidth_   = width;
    p->pixmapDirty_ = true;
-   updateGeometry();
-   update();
+
+   QMetaObject::invokeMethod(this, &QWidget::updateGeometry);
+   QMetaObject::invokeMethod(
+      this, static_cast<void (QWidget::*)()>(&QWidget::update));
 }
 
 void LineLabel::set_border_color(boost::gil::rgba8_pixel_t color)
 {
    p->borderColor_ = color;
    p->pixmapDirty_ = true;
-   update();
+
+   QMetaObject::invokeMethod(
+      this, static_cast<void (QWidget::*)()>(&QWidget::update));
 }
 
 void LineLabel::set_highlight_color(boost::gil::rgba8_pixel_t color)
 {
    p->highlightColor_ = color;
    p->pixmapDirty_    = true;
-   update();
+
+   QMetaObject::invokeMethod(
+      this, static_cast<void (QWidget::*)()>(&QWidget::update));
 }
 
 void LineLabel::set_line_color(boost::gil::rgba8_pixel_t color)
 {
    p->lineColor_   = color;
    p->pixmapDirty_ = true;
-   update();
+
+   QMetaObject::invokeMethod(
+      this, static_cast<void (QWidget::*)()>(&QWidget::update));
 }
 
 void LineLabel::set_line_settings(settings::LineSettings& lineSettings)
