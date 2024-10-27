@@ -470,16 +470,8 @@ void TimelineManager::Impl::PlaySync()
    auto selectTimeEnd = std::chrono::steady_clock::now();
    auto elapsedTime   = selectTimeEnd - selectTimeStart;
 
-   if (volumeTimeUpdated)
-   {
-      // Wait for radar sweeps to update
-      RadarSweepMonitorWait(radarSweepMonitorLock);
-   }
-   else
-   {
-      // Disable radar sweep monitor
-      RadarSweepMonitorDisable();
-   }
+   // Wait for radar sweeps to update
+   RadarSweepMonitorWait(radarSweepMonitorLock);
 
    // Calculate the interval until the next update, prior to selecting
    std::chrono::milliseconds interval;

@@ -497,7 +497,7 @@ void Level2ProductView::UpdateColorTableLut()
 
 void Level2ProductView::ComputeSweep()
 {
-   logger_->debug("ComputeSweep()");
+   logger_->trace("ComputeSweep()");
 
    boost::timer::cpu_timer timer;
 
@@ -528,6 +528,8 @@ void Level2ProductView::ComputeSweep()
       Q_EMIT SweepNotComputed(types::NoUpdateReason::NoChange);
       return;
    }
+
+   logger_->debug("Computing Sweep");
 
    std::size_t radials       = radarData->crbegin()->first + 1;
    std::size_t vertexRadials = radials;
