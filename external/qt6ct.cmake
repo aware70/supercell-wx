@@ -1,6 +1,13 @@
 cmake_minimum_required(VERSION 3.16.0)
 set(PROJECT_NAME scwx-qt6ct)
 
+find_package(QT NAMES Qt6
+             COMPONENTS Gui
+             REQUIRED)
+find_package(Qt${QT_VERSION_MAJOR}
+             COMPONENTS Gui
+             REQUIRED)
+
 #extract version from qt6ct.h
 file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/qt6ct/src/qt6ct-common/qt6ct.h"
      QT6CT_VERSION_DATA REGEX "^#define[ \t]+QT6CT_VERSION_[A-Z]+[ \t]+[0-9]+.*$")
@@ -17,18 +24,20 @@ else()
   message(FATAL_ERROR "invalid header")
 endif()
 
-add_definitions(-DQT6CT_LIBRARY)
-
 set(app_SRCS
   qt6ct/src/qt6ct-common/qt6ct.cpp
 )
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/qt6ct/src/qt6ct-common)
-
 add_library(qt6ct-common STATIC ${app_SRCS})
 set_target_properties(qt6ct-common PROPERTIES VERSION ${QT6CT_VERSION})
 target_link_libraries(qt6ct-common PRIVATE Qt6::Gui)
-install(TARGETS qt6ct-common DESTINATION ${CMAKE_INSTALL_LIBDIR})
+target_compile_definitions(qt6ct-common PRIVATE QT6CT_LIBRARY)
 
-set_target_properties(qt6ct-common PROPERTIES PUBLIC_HEADER qt6ct/src/qt6ct-common/qt6ct.h)
+if (MSVC)
+    # Produce PDB file for debug
+    target_compile_options(qt6ct-common PRIVATE "$<$<CONFIG:Release>:/Zi>")
+else()
+    target_compile_options(qt6ct-common PRIVATE "$<$<CONFIG:Release>:-g>")
+endif()
+
 target_include_directories( qt6ct-common INTERFACE qt6ct/src )
