@@ -33,9 +33,10 @@ enum class UiStyle
    FusionIaOra,
    FusionSand,
    FusionWaves,
+   FusionCustom,
    Unknown
 };
-typedef scwx::util::Iterator<UiStyle, UiStyle::Default, UiStyle::FusionWaves>
+typedef scwx::util::Iterator<UiStyle, UiStyle::Default, UiStyle::FusionCustom>
    UiStyleIterator;
 
 Qt::ColorScheme            GetQtColorScheme(UiStyle uiStyle);

@@ -21,6 +21,7 @@ static const std::unordered_map<UiStyle, std::string> qtStyleName_ {
    {UiStyle::FusionIaOra, "Fusion"},
    {UiStyle::FusionSand, "Fusion"},
    {UiStyle::FusionWaves, "Fusion"},
+   {UiStyle::FusionCustom, "Fusion"},
    {UiStyle::Unknown, "?"}};
 
 static const std::unordered_map<UiStyle, std::string> uiStyleName_ {
@@ -34,6 +35,7 @@ static const std::unordered_map<UiStyle, std::string> uiStyleName_ {
    {UiStyle::FusionIaOra, "Fusion IA Ora"},
    {UiStyle::FusionSand, "Fusion Sand"},
    {UiStyle::FusionWaves, "Fusion Waves"},
+   {UiStyle::FusionCustom, "Fusion Custom"},
    {UiStyle::Unknown, "?"}};
 
 static const std::unordered_map<UiStyle, Qt::ColorScheme> qtColorSchemeMap_ {
@@ -47,6 +49,7 @@ static const std::unordered_map<UiStyle, Qt::ColorScheme> qtColorSchemeMap_ {
    {UiStyle::FusionIaOra, Qt::ColorScheme::Unknown},
    {UiStyle::FusionSand, Qt::ColorScheme::Unknown},
    {UiStyle::FusionWaves, Qt::ColorScheme::Unknown},
+   {UiStyle::FusionCustom, Qt::ColorScheme::Unknown},
    {UiStyle::Unknown, Qt::ColorScheme::Unknown}};
 
 static const std::unordered_map<UiStyle, std::string> paletteFile_ {

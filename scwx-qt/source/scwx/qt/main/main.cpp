@@ -166,14 +166,20 @@ static void ConfigureTheme(const std::vector<std::string>& args)
 
    QGuiApplication::styleHints()->setColorScheme(qtColorScheme);
 
-   std::optional<std::string> paletteFile =
-      scwx::qt::types::GetQtPaletteFile(uiStyle);
+   std::optional<std::string> paletteFile;
+   if (uiStyle == scwx::qt::types::UiStyle::FusionCustom) {
+      paletteFile = generalSettings.theme_file().GetValue();
+   }
+   else
+   {
+      paletteFile = scwx::qt::types::GetQtPaletteFile(uiStyle);
+   }
+
    if (paletteFile)
    {
       QPalette defaultPalette = QApplication::style()->standardPalette();
-      QPalette palette =
-         Qt6CT::loadColorScheme(QString::fromStdString(*paletteFile),
-                                defaultPalette);
+      QPalette palette        = Qt6CT::loadColorScheme(
+         QString::fromStdString(*paletteFile), defaultPalette);
 
       if (defaultPalette == palette)
       {
