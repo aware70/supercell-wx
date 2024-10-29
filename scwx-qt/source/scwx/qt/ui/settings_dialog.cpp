@@ -528,10 +528,24 @@ void SettingsDialogImpl::SetupGeneralTab()
                            types::GetUiStyleName);
    theme_.SetResetButton(self_->ui->resetThemeButton);
 
+   QObject::connect(
+         self_->ui->themeComboBox,
+         &QComboBox::currentTextChanged,
+         self_,
+         [this](const QString& text)
+         {
+            types::UiStyle style = types::GetUiStyle(text.toStdString());
+            bool themeFileEnabled = style == types::UiStyle::FusionCustom;
+
+            self_->ui->themeFileLineEdit->setEnabled(themeFileEnabled);
+            self_->ui->themeFileSelectButton->setEnabled(themeFileEnabled);
+            self_->ui->resetThemeFileButton->setEnabled(themeFileEnabled);
+         });
+
    themeFile_.SetSettingsVariable(generalSettings.theme_file());
    themeFile_.SetEditWidget(self_->ui->themeFileLineEdit);
    themeFile_.SetResetButton(self_->ui->resetThemeFileButton);
-   //themeFile_.EnableTrimming();
+   themeFile_.EnableTrimming();
 
    QObject::connect(
       self_->ui->themeFileSelectButton,
