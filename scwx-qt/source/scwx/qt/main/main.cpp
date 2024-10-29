@@ -23,13 +23,16 @@
 #include <aws/core/Aws.h>
 #include <boost/asio.hpp>
 #include <fmt/format.h>
-#include <qt6ct-common/qt6ct.h>
 #include <QApplication>
 #include <QStandardPaths>
 #include <QStyleHints>
 #include <QTranslator>
 #include <QPalette>
 #include <QStyle>
+
+#define QT6CT_LIBRARY
+#include <qt6ct-common/qt6ct.h>
+#undef QT6CT_LIBRARY
 
 static const std::string logPrefix_ = "scwx::main";
 static const auto        logger_    = scwx::util::Logger::Create(logPrefix_);
