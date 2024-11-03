@@ -574,7 +574,7 @@ void SettingsDialogImpl::SetupGeneralTab()
                logger_->info("Selected theme file: {}", path.toStdString());
                self_->ui->themeFileLineEdit->setText(path);
 
-               // setText dows not emit the textEdited signal
+               // setText does not emit the textEdited signal
                Q_EMIT self_->ui->themeFileLineEdit->textEdited(path);
             });
 
