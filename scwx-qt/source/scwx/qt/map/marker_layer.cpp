@@ -55,17 +55,13 @@ void MarkerLayer::Impl::ReloadMarkers()
 
    geoIcons_->StartIcons();
 
-   for (size_t i = 0; i < markerManager->marker_count(); i++)
-   {
-      std::optional<types::MarkerInfo> marker = markerManager->get_marker(i);
-      if (!marker)
+   markerManager->for_each(
+      [this](const types::MarkerInfo& marker)
       {
-         break;
-      }
-      std::shared_ptr<gl::draw::GeoIconDrawItem> icon = geoIcons_->AddIcon();
-      geoIcons_->SetIconTexture(icon, markerIconName_, 0);
-      geoIcons_->SetIconLocation(icon, marker->latitude, marker->longitude);
-   }
+         std::shared_ptr<gl::draw::GeoIconDrawItem> icon = geoIcons_->AddIcon();
+         geoIcons_->SetIconTexture(icon, markerIconName_, 0);
+         geoIcons_->SetIconLocation(icon, marker.latitude, marker.longitude);
+      });
 
    geoIcons_->FinishIcons();
    Q_EMIT self_->NeedsRendering();

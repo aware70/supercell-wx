@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QAbstractTableModel>
+#include <scwx/qt/types/marker_types.hpp>
 
 namespace scwx
 {
@@ -37,12 +38,13 @@ public:
                 const QVariant&    value,
                 int                role = Qt::EditRole) override;
 
+   std::optional<types::MarkerId> getId(int index);
 
 public slots:
    void HandleMarkersInitialized(size_t count);
-   void HandleMarkerAdded();
-   void HandleMarkerChanged(size_t index);
-   void HandleMarkerRemoved(size_t index);
+   void HandleMarkerAdded(types::MarkerId id);
+   void HandleMarkerChanged(types::MarkerId id);
+   void HandleMarkerRemoved(types::MarkerId id);
 
 private:
    class Impl;

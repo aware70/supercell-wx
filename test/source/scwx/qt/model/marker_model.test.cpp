@@ -65,7 +65,7 @@ void RunTest(const std::string& filename, TestFunction testFunction)
       initialized = false;
       QObject::connect(manager.get(),
                        &manager::MarkerManager::MarkersInitialized,
-                       []()
+                       [](size_t count)
                        {
                           std::unique_lock lock(initializedMutex);
                           initialized = true;
@@ -79,6 +79,8 @@ void RunTest(const std::string& filename, TestFunction testFunction)
       {
          initializedCond.wait(lock);
       }
+      // This is not jank
+      model.HandleMarkersInitialized(manager->marker_count());
 
       testFunction(manager, model);
    }
@@ -118,9 +120,17 @@ TEST(MarkerModelTest, AddRemove)
    RunTest(ONE_MARKERS_FILE,
            [](std::shared_ptr<manager::MarkerManager> manager, MarkerModel&)
            { manager->add_marker(types::MarkerInfo("Null", 0, 0)); });
-   RunTest(EMPTY_MARKERS_FILE,
-           [](std::shared_ptr<manager::MarkerManager> manager, MarkerModel&)
-           { manager->remove_marker(0); });
+   RunTest(
+      EMPTY_MARKERS_FILE,
+      [](std::shared_ptr<manager::MarkerManager> manager, MarkerModel& model)
+      {
+         std::optional<types::MarkerId> id = model.getId(0);
+         EXPECT_TRUE(id);
+         if (id)
+         {
+            manager->remove_marker(*id);
+         }
+      });
 
    std::filesystem::remove(TEMP_MARKERS_FILE);
    EXPECT_EQ(std::filesystem::exists(TEMP_MARKERS_FILE), false);
@@ -165,15 +175,31 @@ TEST(MarkerModelTest, RemoveFive)
 {
    CopyFile(FIVE_MARKERS_FILE, TEMP_MARKERS_FILE);
 
-   RunTest(EMPTY_MARKERS_FILE,
-           [](std::shared_ptr<manager::MarkerManager> manager, MarkerModel&)
-           {
-              manager->remove_marker(4);
-              manager->remove_marker(3);
-              manager->remove_marker(2);
-              manager->remove_marker(1);
-              manager->remove_marker(0);
-           });
+   RunTest(
+      EMPTY_MARKERS_FILE,
+      [](std::shared_ptr<manager::MarkerManager> manager, MarkerModel& model)
+      {
+         std::optional<types::MarkerId> id;
+         id = model.getId(4);
+         EXPECT_TRUE(id);
+         manager->remove_marker(*id);
+
+         id = model.getId(3);
+         EXPECT_TRUE(id);
+         manager->remove_marker(*id);
+
+         id = model.getId(2);
+         EXPECT_TRUE(id);
+         manager->remove_marker(*id);
+
+         id = model.getId(1);
+         EXPECT_TRUE(id);
+         manager->remove_marker(*id);
+
+         id = model.getId(0);
+         EXPECT_TRUE(id);
+         manager->remove_marker(*id);
+      });
 
    std::filesystem::remove(TEMP_MARKERS_FILE);
    EXPECT_EQ(std::filesystem::exists(TEMP_MARKERS_FILE), false);
@@ -183,14 +209,27 @@ TEST(MarkerModelTest, RemoveFour)
 {
    CopyFile(FIVE_MARKERS_FILE, TEMP_MARKERS_FILE);
 
-   RunTest(ONE_MARKERS_FILE,
-           [](std::shared_ptr<manager::MarkerManager> manager, MarkerModel&)
-           {
-              manager->remove_marker(4);
-              manager->remove_marker(3);
-              manager->remove_marker(2);
-              manager->remove_marker(1);
-           });
+   RunTest(
+      ONE_MARKERS_FILE,
+      [](std::shared_ptr<manager::MarkerManager> manager, MarkerModel& model)
+      {
+         std::optional<types::MarkerId> id;
+         id = model.getId(4);
+         EXPECT_TRUE(id);
+         manager->remove_marker(*id);
+
+         id = model.getId(3);
+         EXPECT_TRUE(id);
+         manager->remove_marker(*id);
+
+         id = model.getId(2);
+         EXPECT_TRUE(id);
+         manager->remove_marker(*id);
+
+         id = model.getId(1);
+         EXPECT_TRUE(id);
+         manager->remove_marker(*id);
+      });
 
    std::filesystem::remove(TEMP_MARKERS_FILE);
    EXPECT_EQ(std::filesystem::exists(TEMP_MARKERS_FILE), false);
