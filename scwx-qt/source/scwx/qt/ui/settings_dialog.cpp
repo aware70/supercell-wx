@@ -521,12 +521,6 @@ void SettingsDialogImpl::SetupGeneralTab()
    settings::GeneralSettings& generalSettings =
       settings::GeneralSettings::Instance();
 
-   theme_.SetSettingsVariable(generalSettings.theme());
-   SCWX_SETTINGS_COMBO_BOX(theme_,
-                           self_->ui->themeComboBox,
-                           types::UiStyleIterator(),
-                           types::GetUiStyleName);
-   theme_.SetResetButton(self_->ui->resetThemeButton);
 
    QObject::connect(
          self_->ui->themeComboBox,
@@ -541,6 +535,13 @@ void SettingsDialogImpl::SetupGeneralTab()
             self_->ui->themeFileSelectButton->setEnabled(themeFileEnabled);
             self_->ui->resetThemeFileButton->setEnabled(themeFileEnabled);
          });
+
+   theme_.SetSettingsVariable(generalSettings.theme());
+   SCWX_SETTINGS_COMBO_BOX(theme_,
+                           self_->ui->themeComboBox,
+                           types::UiStyleIterator(),
+                           types::GetUiStyleName);
+   theme_.SetResetButton(self_->ui->resetThemeButton);
 
    themeFile_.SetSettingsVariable(generalSettings.theme_file());
    themeFile_.SetEditWidget(self_->ui->themeFileLineEdit);
