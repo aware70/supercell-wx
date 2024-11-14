@@ -73,6 +73,7 @@ public:
       showMapCenter_.SetDefault(false);
       showMapLogo_.SetDefault(true);
       theme_.SetDefault(defaultThemeValue);
+      themeFile_.SetDefault("");
       trackLocation_.SetDefault(false);
       updateNotificationsEnabled_.SetDefault(true);
       warningsProvider_.SetDefault(defaultWarningsProviderValue);
@@ -161,6 +162,7 @@ public:
    SettingsVariable<bool>         showMapCenter_ {"show_map_center"};
    SettingsVariable<bool>         showMapLogo_ {"show_map_logo"};
    SettingsVariable<std::string>  theme_ {"theme"};
+   SettingsVariable<std::string>  themeFile_ {"theme_file"};
    SettingsVariable<bool>         trackLocation_ {"track_location"};
    SettingsVariable<bool> updateNotificationsEnabled_ {"update_notifications"};
    SettingsVariable<std::string> warningsProvider_ {"warnings_provider"};
@@ -193,6 +195,7 @@ GeneralSettings::GeneralSettings() :
                       &p->showMapCenter_,
                       &p->showMapLogo_,
                       &p->theme_,
+                      &p->themeFile_,
                       &p->trackLocation_,
                       &p->updateNotificationsEnabled_,
                       &p->warningsProvider_});
@@ -325,6 +328,11 @@ SettingsVariable<std::string>& GeneralSettings::theme() const
    return p->theme_;
 }
 
+SettingsVariable<std::string>& GeneralSettings::theme_file() const
+{
+   return p->themeFile_;
+}
+
 SettingsVariable<bool>& GeneralSettings::track_location() const
 {
    return p->trackLocation_;
@@ -385,6 +393,7 @@ bool operator==(const GeneralSettings& lhs, const GeneralSettings& rhs)
            lhs.p->showMapCenter_ == rhs.p->showMapCenter_ &&
            lhs.p->showMapLogo_ == rhs.p->showMapLogo_ &&
            lhs.p->theme_ == rhs.p->theme_ &&
+           lhs.p->themeFile_ == rhs.p->themeFile_ &&
            lhs.p->trackLocation_ == rhs.p->trackLocation_ &&
            lhs.p->updateNotificationsEnabled_ ==
               rhs.p->updateNotificationsEnabled_ &&

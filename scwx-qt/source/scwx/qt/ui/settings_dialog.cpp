@@ -121,6 +121,7 @@ public:
           &mapboxApiKey_,
           &mapTilerApiKey_,
           &theme_,
+          &themeFile_,
           &defaultAlertAction_,
           &clockFormat_,
           &customStyleDrawLayer_,
@@ -242,6 +243,7 @@ public:
    settings::SettingsInterface<std::int64_t> nmeaBaudRate_ {};
    settings::SettingsInterface<std::string>  nmeaSource_ {};
    settings::SettingsInterface<std::string>  theme_ {};
+   settings::SettingsInterface<std::string>  themeFile_ {};
    settings::SettingsInterface<std::string>  warningsProvider_ {};
    settings::SettingsInterface<bool>         antiAliasingEnabled_ {};
    settings::SettingsInterface<bool>         showMapAttribution_ {};
@@ -519,12 +521,66 @@ void SettingsDialogImpl::SetupGeneralTab()
    settings::GeneralSettings& generalSettings =
       settings::GeneralSettings::Instance();
 
+
+   QObject::connect(
+         self_->ui->themeComboBox,
+         &QComboBox::currentTextChanged,
+         self_,
+         [this](const QString& text)
+         {
+            types::UiStyle style = types::GetUiStyle(text.toStdString());
+            bool themeFileEnabled = style == types::UiStyle::FusionCustom;
+
+            self_->ui->themeFileLineEdit->setEnabled(themeFileEnabled);
+            self_->ui->themeFileSelectButton->setEnabled(themeFileEnabled);
+            self_->ui->resetThemeFileButton->setEnabled(themeFileEnabled);
+         });
+
    theme_.SetSettingsVariable(generalSettings.theme());
    SCWX_SETTINGS_COMBO_BOX(theme_,
                            self_->ui->themeComboBox,
                            types::UiStyleIterator(),
                            types::GetUiStyleName);
    theme_.SetResetButton(self_->ui->resetThemeButton);
+
+   themeFile_.SetSettingsVariable(generalSettings.theme_file());
+   themeFile_.SetEditWidget(self_->ui->themeFileLineEdit);
+   themeFile_.SetResetButton(self_->ui->resetThemeFileButton);
+   themeFile_.EnableTrimming();
+
+   QObject::connect(
+      self_->ui->themeFileSelectButton,
+      &QAbstractButton::clicked,
+      self_,
+      [this]()
+      {
+         static const std::string themeFilter = "Qt6Ct Theme File (*.conf)";
+         static const std::string allFilter   = "All Files (*)";
+
+         QFileDialog* dialog = new QFileDialog(self_);
+
+         dialog->setFileMode(QFileDialog::ExistingFile);
+
+         dialog->setNameFilters(
+            {QObject::tr(themeFilter.c_str()), QObject::tr(allFilter.c_str())});
+         dialog->setAttribute(Qt::WA_DeleteOnClose);
+
+         QObject::connect(
+            dialog,
+            &QFileDialog::fileSelected,
+            self_,
+            [this](const QString& file)
+            {
+               QString path = QDir::toNativeSeparators(file);
+               logger_->info("Selected theme file: {}", path.toStdString());
+               self_->ui->themeFileLineEdit->setText(path);
+
+               // setText does not emit the textEdited signal
+               Q_EMIT self_->ui->themeFileLineEdit->textEdited(path);
+            });
+
+         dialog->open();
+      });
 
    auto radarSites = config::RadarSite::GetAll();
 

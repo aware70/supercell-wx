@@ -21,7 +21,9 @@ find_package(Python COMPONENTS Interpreter)
 find_package(SQLite3)
 
 find_package(QT NAMES Qt6
-             COMPONENTS Gui
+             COMPONENTS BuildInternals
+                        Core
+                        Gui
                         LinguistTools
                         Multimedia
                         Network
@@ -30,10 +32,14 @@ find_package(QT NAMES Qt6
                         Positioning
                         SerialPort
                         Svg
-                        Widgets REQUIRED)
+                        Widgets
+                        Sql
+             REQUIRED)
 
 find_package(Qt${QT_VERSION_MAJOR}
-             COMPONENTS Gui
+             COMPONENTS BuildInternals
+                        Core
+                        Gui
                         LinguistTools
                         Multimedia
                         Network
@@ -685,6 +691,7 @@ target_link_libraries(scwx-qt PUBLIC Qt${QT_VERSION_MAJOR}::Widgets
                                      GLEW::GLEW
                                      glm::glm
                                      imgui
+                                     qt6ct-common
                                      SQLite::SQLite3
                                      wxdata)
 
