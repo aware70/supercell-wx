@@ -1480,7 +1480,7 @@ std::vector<std::string> RadarProductManager::GetLevel3Products()
 
 void RadarProductManager::SetCacheLimit(size_t cacheLimit)
 {
-   p->cacheLimit_ = cacheLimit;
+   p->cacheLimit_ = std::max<std::size_t>(cacheLimit, 6u);
 }
 
 void RadarProductManager::UpdateAvailableProducts()
