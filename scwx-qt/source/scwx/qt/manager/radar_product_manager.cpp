@@ -1164,26 +1164,31 @@ RadarProductManagerImpl::GetLevel2ProductRecords(
    // Ensure Level 2 product records are updated
    PopulateLevel2ProductTimes(time);
 
-   if (!level2ProductRecords_.empty() &&
-       time == std::chrono::system_clock::time_point {})
    {
-      // If a default-initialized time point is given, return the latest record
-      recordPtrs.push_back(&(*level2ProductRecords_.rbegin()));
-   }
-   else
-   {
-      // Get the requested record
-      auto recordIt =
-         scwx::util::GetBoundedElementIterator(level2ProductRecords_, time);
+      std::shared_lock lock {level2ProductRecordMutex_};
 
-      if (recordIt != level2ProductRecords_.cend())
+      if (!level2ProductRecords_.empty() &&
+          time == std::chrono::system_clock::time_point {})
       {
-         recordPtrs.push_back(&(*(recordIt)));
+         // If a default-initialized time point is given, return the latest
+         // record
+         recordPtrs.push_back(&(*level2ProductRecords_.rbegin()));
+      }
+      else
+      {
+         // Get the requested record
+         auto recordIt =
+            scwx::util::GetBoundedElementIterator(level2ProductRecords_, time);
 
-         // The requested time may be in the previous record, so get that too
-         if (recordIt != level2ProductRecords_.cbegin())
+         if (recordIt != level2ProductRecords_.cend())
          {
-            recordPtrs.push_back(&(*(--recordIt)));
+            recordPtrs.push_back(&(*(recordIt)));
+
+            // The requested time may be in the previous record, so get that too
+            if (recordIt != level2ProductRecords_.cbegin())
+            {
+               recordPtrs.push_back(&(*(--recordIt)));
+            }
          }
       }
    }
