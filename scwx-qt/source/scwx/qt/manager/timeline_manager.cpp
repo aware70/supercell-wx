@@ -466,7 +466,7 @@ void TimelineManager::Impl::PlaySync()
 
    // Select the time
    auto selectTimeStart = std::chrono::steady_clock::now();
-   auto [volumeTimeUpdated, selectedTimeUpdated] = SelectTime(newTime);
+   SelectTime(newTime);
    auto selectTimeEnd = std::chrono::steady_clock::now();
    auto elapsedTime   = selectTimeEnd - selectTimeStart;
 
