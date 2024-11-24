@@ -168,7 +168,17 @@ SerialPortDialog::~SerialPortDialog()
 
 std::string SerialPortDialog::serial_port()
 {
-   return p->selectedSerialPort_;
+   std::string serialPort = p->selectedSerialPort_;
+
+#if !defined(_WIN32)
+   auto it = p->portInfoMap_.find(p->selectedSerialPort_);
+   if (it != p->portInfoMap_.cend())
+   {
+      serialPort = it->second.systemLocation().toStdString();
+   }
+#endif
+
+   return serialPort;
 }
 
 int SerialPortDialog::baud_rate()
@@ -225,7 +235,8 @@ void SerialPortDialog::Impl::UpdateModel()
    static const QStringList headerLabels {
       tr("Port"), tr("Description"), tr("Device")};
 #else
-   static const QStringList headerLabels {tr("Port"), tr("Description")};
+   static const QStringList headerLabels {
+      tr("Port"), tr("Location"), tr("Description")};
 #endif
 
    // Clear existing serial ports
@@ -260,8 +271,11 @@ void SerialPortDialog::Impl::UpdateModel()
                        new QStandardItem(description),
                        new QStandardItem(device)});
 #else
-      root->appendRow(
-         {new QStandardItem(portName), new QStandardItem(description)});
+      const QString systemLocation = port.second.systemLocation();
+
+      root->appendRow({new QStandardItem(portName),
+                       new QStandardItem(systemLocation),
+                       new QStandardItem(description)});
 #endif
    }
 
