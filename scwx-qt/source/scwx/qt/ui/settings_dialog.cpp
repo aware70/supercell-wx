@@ -41,6 +41,7 @@
 #include <QFontDatabase>
 #include <QFontDialog>
 #include <QGeoPositionInfo>
+#include <QPushButton>
 #include <QStandardItemModel>
 #include <QToolButton>
 
@@ -290,6 +291,10 @@ SettingsDialog::SettingsDialog(QWidget* parent) :
     ui(new Ui::SettingsDialog)
 {
    ui->setupUi(this);
+
+   // Set OK as default
+   ui->buttonBox->button(QDialogButtonBox::StandardButton::Ok)
+      ->setDefault(true);
 
    // General
    p->SetupGeneralTab();
