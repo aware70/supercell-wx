@@ -25,7 +25,7 @@ std::string NormalizeUrl(const std::string& urlString)
    }
    else
    {
-      normalizedUrl = urlString;
+      normalizedUrl = trimmedUrlString.toStdString();
    }
 
    return normalizedUrl;
