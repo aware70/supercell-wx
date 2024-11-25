@@ -297,14 +297,19 @@ void MarkerModel::HandleMarkerAdded(types::MarkerId id)
    const int newIndex = static_cast<int>(*index);
 
    beginInsertRows(QModelIndex(), newIndex, newIndex);
-   p->markerIds_.emplace_back(id);
+   auto it = std::next(p->markerIds_.begin(), newIndex);
+   p->markerIds_.emplace(it, id);
    endInsertRows();
 }
 
 void MarkerModel::HandleMarkerChanged(types::MarkerId id)
 {
-   std::optional<size_t> index = p->markerManager_->get_index(id);
-   const int changedIndex = static_cast<int>(*index);
+   auto it = std::find(p->markerIds_.begin(), p->markerIds_.end(), id);
+   if (it == p->markerIds_.end())
+   {
+      return;
+   }
+   const int changedIndex = std::distance(p->markerIds_.begin(), it);
 
    QModelIndex topLeft = createIndex(changedIndex, kFirstColumn);
    QModelIndex bottomRight = createIndex(changedIndex, kLastColumn);

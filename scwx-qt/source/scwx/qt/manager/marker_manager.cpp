@@ -315,7 +315,7 @@ void MarkerManager::remove_marker(types::MarkerId id)
       {
          if (pair.second > index)
          {
-            p->idToIndex_[pair.first] = pair.second - 1;
+            pair.second -= 1;
          }
       }
    }
