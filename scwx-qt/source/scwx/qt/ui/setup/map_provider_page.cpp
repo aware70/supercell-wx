@@ -209,9 +209,11 @@ void MapProviderPage::Impl::SetupSettingsInterface()
    mapProvider_.SetEditWidget(mapProviderComboBox_);
 
    mapboxApiKey_.SetSettingsVariable(generalSettings.mapbox_api_key());
+   mapboxApiKey_.EnableTrimming();
    mapboxApiKey_.SetEditWidget(mapboxGroup_.apiKeyEdit_);
 
    mapTilerApiKey_.SetSettingsVariable(generalSettings.maptiler_api_key());
+   mapTilerApiKey_.EnableTrimming();
    mapTilerApiKey_.SetEditWidget(maptilerGroup_.apiKeyEdit_);
 }
 
