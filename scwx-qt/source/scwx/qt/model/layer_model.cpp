@@ -774,6 +774,13 @@ bool LayerModel::dropMimeData(const QMimeData* data,
    QDataStream      stream(&mimeData, QIODevice::ReadOnly);
    std::vector<int> sourceRows {};
 
+   // Validate parent row
+   if (parent.row() < 0 || parent.row() >= static_cast<int>(p->layers_.size()))
+   {
+      logger_->warn("Cannot perform drop action, invalid parent row");
+      return false;
+   }
+
    // Read source rows from QMimeData
    while (!stream.atEnd())
    {
