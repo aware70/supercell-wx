@@ -65,21 +65,25 @@ void MarkerSettingsWidgetImpl::ConnectSignals()
                     {
                        markerManager_->add_marker(types::MarkerInfo("", 0, 0));
                     });
-   QObject::connect(self_->ui->removeButton,
-                    &QPushButton::clicked,
-                    self_,
-                    [this]()
-                    {
-                       auto selectionModel =
-                          self_->ui->markerView->selectionModel();
-                       QModelIndex selected =
-                          selectionModel
-                             ->selectedRows(static_cast<int>(
-                                model::MarkerModel::Column::Name))
-                             .first();
+   QObject::connect(
+      self_->ui->removeButton,
+      &QPushButton::clicked,
+      self_,
+      [this]()
+      {
+         auto        selectionModel = self_->ui->markerView->selectionModel();
+         QModelIndex selected       = selectionModel
+                                   ->selectedRows(static_cast<int>(
+                                      model::MarkerModel::Column::Name))
+                                   .first();
+         std::optional<types::MarkerId> id = markerModel_->getId(selected.row());
+         if (!id)
+         {
+            return;
+         }
 
-                       markerManager_->remove_marker(selected.row());
-                    });
+         markerManager_->remove_marker(*id);
+      });
    QObject::connect(
       self_->ui->markerView->selectionModel(),
       &QItemSelectionModel::selectionChanged,

@@ -36,8 +36,10 @@ public:
    explicit Impl(MarkerManager* self) : self_ {self} {}
    ~Impl() { threadPool_.join(); }
 
-   std::string                                markerSettingsPath_ {};
+   std::string                                markerSettingsPath_ {""};
    std::vector<std::shared_ptr<MarkerRecord>> markerRecords_ {};
+   std::unordered_map<types::MarkerId, size_t> idToIndex_ {};
+
 
    MarkerManager* self_;
 
@@ -48,6 +50,10 @@ public:
    void                          ReadMarkerSettings();
    void                          WriteMarkerSettings();
    std::shared_ptr<MarkerRecord> GetMarkerByName(const std::string& name);
+
+   void InitalizeIds();
+   types::MarkerId NewId();
+   types::MarkerId lastId_;
 };
 
 class MarkerManager::Impl::MarkerRecord
@@ -88,6 +94,16 @@ public:
    }
 };
 
+void MarkerManager::Impl::InitalizeIds()
+{
+   lastId_ = 0;
+}
+
+types::MarkerId MarkerManager::Impl::NewId()
+{
+   return ++lastId_;
+}
+
 void MarkerManager::Impl::InitializeMarkerSettings()
 {
    std::string appDataPath {
@@ -109,6 +125,7 @@ void MarkerManager::Impl::InitializeMarkerSettings()
 void MarkerManager::Impl::ReadMarkerSettings()
 {
    logger_->info("Reading location marker settings");
+   InitalizeIds();
 
    boost::json::value markerJson = nullptr;
    {
@@ -125,6 +142,7 @@ void MarkerManager::Impl::ReadMarkerSettings()
          // For each marker entry
          auto& markerArray = markerJson.as_array();
          markerRecords_.reserve(markerArray.size());
+         idToIndex_.reserve(markerArray.size());
          for (auto& markerEntry : markerArray)
          {
             try
@@ -134,8 +152,12 @@ void MarkerManager::Impl::ReadMarkerSettings()
 
                if (!record.markerInfo_.name.empty())
                {
+                  types::MarkerId id    = NewId();
+                  size_t          index = markerRecords_.size();
+                  record.markerInfo_.id = id;
                   markerRecords_.emplace_back(
                      std::make_shared<MarkerRecord>(record.markerInfo_));
+                  idToIndex_.emplace(id, index);
                }
             }
             catch (const std::exception& ex)
@@ -176,14 +198,13 @@ MarkerManager::Impl::GetMarkerByName(const std::string& name)
 
 MarkerManager::MarkerManager() : p(std::make_unique<Impl>(this))
 {
+   p->InitializeMarkerSettings();
 
    boost::asio::post(p->threadPool_,
                      [this]()
                      {
                         try
                         {
-                           p->InitializeMarkerSettings();
-
                            // Read Marker settings on startup
                            main::Application::WaitForInitialization();
                            p->ReadMarkerSettings();
@@ -207,11 +228,17 @@ size_t MarkerManager::marker_count()
    return p->markerRecords_.size();
 }
 
-std::optional<types::MarkerInfo> MarkerManager::get_marker(size_t index)
+std::optional<types::MarkerInfo> MarkerManager::get_marker(types::MarkerId id)
 {
    std::shared_lock lock(p->markerRecordLock_);
+   if (!p->idToIndex_.contains(id))
+   {
+      return {};
+   }
+   size_t index = p->idToIndex_[id];
    if (index >= p->markerRecords_.size())
    {
+      logger_->warn("id in idToIndex_ but out of range!");
       return {};
    }
    std::shared_ptr<MarkerManager::Impl::MarkerRecord>& markerRecord =
@@ -219,45 +246,81 @@ std::optional<types::MarkerInfo> MarkerManager::get_marker(size_t index)
    return markerRecord->toMarkerInfo();
 }
 
-void MarkerManager::set_marker(size_t index, const types::MarkerInfo& marker)
+std::optional<size_t> MarkerManager::get_index(types::MarkerId id)
+{
+   std::shared_lock lock(p->markerRecordLock_);
+   if (!p->idToIndex_.contains(id))
+   {
+      return {};
+   }
+   return p->idToIndex_[id];
+}
+
+void MarkerManager::set_marker(types::MarkerId id, const types::MarkerInfo& marker)
 {
    {
       std::unique_lock lock(p->markerRecordLock_);
+      if (!p->idToIndex_.contains(id))
+      {
+         return;
+      }
+      size_t index = p->idToIndex_[id];
       if (index >= p->markerRecords_.size())
       {
+         logger_->warn("id in idToIndex_ but out of range!");
          return;
       }
       std::shared_ptr<MarkerManager::Impl::MarkerRecord>& markerRecord =
          p->markerRecords_[index];
       markerRecord->markerInfo_ = marker;
    }
-   Q_EMIT MarkerChanged(index);
+   Q_EMIT MarkerChanged(id);
    Q_EMIT MarkersUpdated();
 }
 
 void MarkerManager::add_marker(const types::MarkerInfo& marker)
 {
+   types::MarkerId id;
    {
       std::unique_lock lock(p->markerRecordLock_);
+      id = p->NewId();
+      size_t index = p->markerRecords_.size();
+      p->idToIndex_.emplace(id, index);
       p->markerRecords_.emplace_back(std::make_shared<Impl::MarkerRecord>(marker));
+      p->markerRecords_[index]->markerInfo_.id = id;
    }
-   Q_EMIT MarkerAdded();
+   Q_EMIT MarkerAdded(id);
    Q_EMIT MarkersUpdated();
 }
 
-void MarkerManager::remove_marker(size_t index)
+void MarkerManager::remove_marker(types::MarkerId id)
 {
    {
       std::unique_lock lock(p->markerRecordLock_);
+      if (!p->idToIndex_.contains(id))
+      {
+         return;
+      }
+      size_t index = p->idToIndex_[id];
       if (index >= p->markerRecords_.size())
       {
+         logger_->warn("id in idToIndex_ but out of range!");
          return;
       }
 
       p->markerRecords_.erase(std::next(p->markerRecords_.begin(), index));
+      p->idToIndex_.erase(id);
+
+      for (auto& pair : p->idToIndex_)
+      {
+         if (pair.second > index)
+         {
+            pair.second -= 1;
+         }
+      }
    }
 
-   Q_EMIT MarkerRemoved(index);
+   Q_EMIT MarkerRemoved(id);
    Q_EMIT MarkersUpdated();
 }
 
@@ -292,6 +355,22 @@ void MarkerManager::move_marker(size_t from, size_t to)
    }
    Q_EMIT MarkersUpdated();
 }
+
+void MarkerManager::for_each(std::function<MarkerForEachFunc> func)
+{
+   std::shared_lock lock(p->markerRecordLock_);
+   for (auto marker : p->markerRecords_)
+   {
+      func(marker->markerInfo_);
+   }
+}
+
+// Only use for testing
+void MarkerManager::set_marker_settings_path(const std::string& path)
+{
+   p->markerSettingsPath_ = path;
+}
+
 
 std::shared_ptr<MarkerManager> MarkerManager::Instance()
 {

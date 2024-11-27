@@ -5,6 +5,8 @@
 #include <scwx/qt/types/qt_types.hpp>
 #include <scwx/util/logger.hpp>
 
+#include <vector>
+
 #include <QApplication>
 
 namespace scwx
@@ -30,6 +32,7 @@ public:
    ~Impl() = default;
    std::shared_ptr<manager::MarkerManager> markerManager_ {
       manager::MarkerManager::Instance()};
+   std::vector<types::MarkerId> markerIds_;
 };
 
 MarkerModel::MarkerModel(QObject* parent) :
@@ -63,7 +66,7 @@ int MarkerModel::rowCount(const QModelIndex& parent) const
 {
    return parent.isValid() ?
              0 :
-             static_cast<int>(p->markerManager_->marker_count());
+             static_cast<int>(p->markerIds_.size());
 }
 
 int MarkerModel::columnCount(const QModelIndex& parent) const
@@ -95,15 +98,19 @@ QVariant MarkerModel::data(const QModelIndex& index, int role) const
    static const char COORDINATE_FORMAT    = 'g';
    static const int  COORDINATE_PRECISION = 10;
 
-   if (!index.isValid() || index.row() < 0)
+   if (!index.isValid() || index.row() < 0 ||
+       static_cast<size_t>(index.row()) >= p->markerIds_.size())
    {
+      logger_->debug("Failed to get data index {}", index.row());
       return QVariant();
    }
 
+   types::MarkerId id = p->markerIds_[index.row()];
    std::optional<types::MarkerInfo> markerInfo =
-      p->markerManager_->get_marker(index.row());
+      p->markerManager_->get_marker(id);
    if (!markerInfo)
    {
+      logger_->debug("Failed to get data index {} id {}", index.row(), id);
       return QVariant();
    }
 
@@ -154,6 +161,16 @@ QVariant MarkerModel::data(const QModelIndex& index, int role) const
    return QVariant();
 }
 
+std::optional<types::MarkerId> MarkerModel::getId(int index)
+{
+   if (index < 0 || static_cast<size_t>(index) >= p->markerIds_.size())
+   {
+      return {};
+   }
+
+   return p->markerIds_[index];
+}
+
 QVariant MarkerModel::headerData(int             section,
                                  Qt::Orientation orientation,
                                  int             role) const
@@ -186,12 +203,16 @@ bool MarkerModel::setData(const QModelIndex& index,
                           const QVariant&    value,
                           int                role)
 {
-   if (!index.isValid() || index.row() < 0)
+
+   if (!index.isValid() || index.row() < 0 ||
+       static_cast<size_t>(index.row()) >= p->markerIds_.size())
    {
       return false;
    }
+
+   types::MarkerId id = p->markerIds_[index.row()];
    std::optional<types::MarkerInfo> markerInfo =
-      p->markerManager_->get_marker(index.row());
+      p->markerManager_->get_marker(id);
    if (!markerInfo)
    {
       return false;
@@ -205,7 +226,7 @@ bool MarkerModel::setData(const QModelIndex& index,
       {
          QString str = value.toString();
          markerInfo->name = str.toStdString();
-         p->markerManager_->set_marker(index.row(), *markerInfo);
+         p->markerManager_->set_marker(id, *markerInfo);
          result = true;
       }
       break;
@@ -219,7 +240,7 @@ bool MarkerModel::setData(const QModelIndex& index,
          if (!str.isEmpty() && ok && -90 <= latitude && latitude <= 90)
          {
             markerInfo->latitude = latitude;
-            p->markerManager_->set_marker(index.row(), *markerInfo);
+            p->markerManager_->set_marker(id, *markerInfo);
             result = true;
          }
       }
@@ -234,7 +255,7 @@ bool MarkerModel::setData(const QModelIndex& index,
          if (!str.isEmpty() && ok && -180 <= longitude && longitude <= 180)
          {
             markerInfo->longitude = longitude;
-            p->markerManager_->set_marker(index.row(), *markerInfo);
+            p->markerManager_->set_marker(id, *markerInfo);
             result = true;
          }
       }
@@ -254,34 +275,64 @@ bool MarkerModel::setData(const QModelIndex& index,
 
 void MarkerModel::HandleMarkersInitialized(size_t count)
 {
+   if (count == 0)
+   {
+      return;
+   }
    const int index = static_cast<int>(count - 1);
 
+   p->markerIds_.reserve(count);
    beginInsertRows(QModelIndex(), 0, index);
+   p->markerManager_->for_each(
+      [this](const types::MarkerInfo& info)
+      {
+         p->markerIds_.push_back(info.id);
+      });
    endInsertRows();
 }
 
-void MarkerModel::HandleMarkerAdded()
+void MarkerModel::HandleMarkerAdded(types::MarkerId id)
 {
-   const int newIndex = static_cast<int>(p->markerManager_->marker_count() - 1);
+   std::optional<size_t> index = p->markerManager_->get_index(id);
+   if (!index)
+   {
+      return;
+   }
+   const int newIndex = static_cast<int>(*index);
 
    beginInsertRows(QModelIndex(), newIndex, newIndex);
+   auto it = std::next(p->markerIds_.begin(), newIndex);
+   p->markerIds_.emplace(it, id);
    endInsertRows();
 }
 
-void MarkerModel::HandleMarkerChanged(size_t index)
+void MarkerModel::HandleMarkerChanged(types::MarkerId id)
 {
-   const int changedIndex = static_cast<int>(index);
+   auto it = std::find(p->markerIds_.begin(), p->markerIds_.end(), id);
+   if (it == p->markerIds_.end())
+   {
+      return;
+   }
+   const int changedIndex = std::distance(p->markerIds_.begin(), it);
+
    QModelIndex topLeft = createIndex(changedIndex, kFirstColumn);
    QModelIndex bottomRight = createIndex(changedIndex, kLastColumn);
 
    Q_EMIT dataChanged(topLeft, bottomRight);
 }
 
-void MarkerModel::HandleMarkerRemoved(size_t index)
+void MarkerModel::HandleMarkerRemoved(types::MarkerId id)
 {
-   const int removedIndex = static_cast<int>(index);
+   auto it = std::find(p->markerIds_.begin(), p->markerIds_.end(), id);
+   if (it == p->markerIds_.end())
+   {
+      return;
+   }
+
+   const int removedIndex = std::distance(p->markerIds_.begin(), it);
 
    beginRemoveRows(QModelIndex(), removedIndex, removedIndex);
+   p->markerIds_.erase(it);
    endRemoveRows();
 }
 
