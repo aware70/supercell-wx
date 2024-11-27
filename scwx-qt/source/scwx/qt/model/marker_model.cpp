@@ -294,6 +294,10 @@ void MarkerModel::HandleMarkersInitialized(size_t count)
 void MarkerModel::HandleMarkerAdded(types::MarkerId id)
 {
    std::optional<size_t> index = p->markerManager_->get_index(id);
+   if (!index)
+   {
+      return;
+   }
    const int newIndex = static_cast<int>(*index);
 
    beginInsertRows(QModelIndex(), newIndex, newIndex);
