@@ -6,7 +6,7 @@
 #include <ranges>
 #include <unordered_map>
 
-#include <boost/process/environment.hpp>
+#include <boost/process/v1/environment.hpp>
 #include <fmt/format.h>
 #include <spdlog/spdlog.h>
 #include <QStandardPaths>
