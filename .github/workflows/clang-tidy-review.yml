@@ -15,27 +15,41 @@ jobs:
     strategy:
       matrix:
         include:
-          - name: linux64_clang
+          - name: linux64_clang-tidy
             os: ubuntu-24.04
             build_type: Release
+            env_cc: clang-17
+            env_cxx: clang++-17
             qt_version: 6.8.0
             qt_arch_aqt: linux_gcc_64
             qt_modules: qtimageformats qtmultimedia qtpositioning qtserialport
             qt_tools: ''
             conan_arch: x86_64
-            conan_compiler: gcc
-            conan_compiler_version: 14
-            conan_compiler_libcxx: --settings compiler.libcxx=libstdc++
+            conan_compiler: clang
+            conan_compiler_version: 17
+            conan_compiler_libcxx: --settings compiler.libcxx=libstdc++11
             conan_compiler_runtime: ''
             conan_package_manager: --conf tools.system.package_manager:mode=install --conf tools.system.package_manager:sudo=True
-            compiler_packages: clang-17
+            compiler_packages: clang-17 clang-tidy-17
+    name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
+    env:
+      CC: ${{ matrix.env_cc }}
+      CXX: ${{ matrix.env_cxx }}
     steps:
 
     - name: Checkout
       uses: actions/checkout@v4
       with:
+        path: source
         submodules: recursive
+
+    - name: Checkout clang-tidy-review Repository
+      uses: actions/checkout@v4
+      with:
+        repository: ZedThree/clang-tidy-review
+        ref: v0.20.1
+        path: clang-tidy-review
 
     - name: Install Qt
       uses: jurplel/install-qt-action@v3
@@ -59,13 +73,14 @@ jobs:
       run: |
         pip install geopandas `
                     GitPython
+        pip install --break-system-packages clang-tidy-review/post/clang_tidy_review
 
     - name: Install Conan Packages
       shell: pwsh
       run: |
         pip install "conan<2.0"
         conan profile new default --detect
-        conan install ./ `
+        conan install ./source/ `
           --remote conancenter `
           --build missing `
           --settings arch=${{ matrix.conan_arch }} `
@@ -81,7 +96,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake ../ `
+        cmake ../source/ `
           -G Ninja `
           -DCMAKE_BUILD_TYPE="${{ matrix.build_type }}" `
           -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/supercell-wx" `
@@ -91,13 +106,31 @@ jobs:
               scwx-qt_update_radar_sites `
               scwx-qt_autogen
 
-    - name: Review
+    - name: Code Review
       id: review
-      uses: ZedThree/clang-tidy-review@v0.14.0
-      with:
-        config_file: .clang-tidy
-        build_dir: build
-        lgtm_comment_body: ''
+      shell: bash
+      run: |
+        cd source
+        review --clang_tidy_binary=clang-tidy-17 \
+               --token=${{ github.token }} \
+               --repo='${{ github.repository }}' \
+               --pr='${{ github.event.pull_request.number }}' \
+               --build_dir='../build' \
+               --base_dir='${{ github.workspace }}/source' \
+               --clang_tidy_checks='' \
+               --config_file='.clang-tidy' \
+               --include='*.[ch],*.[ch]xx,*.[ch]pp,*.[ch]++,*.cc,*.hh' \
+               --exclude='' \
+               --apt-packages='' \
+               --cmake-command='' \
+               --max-comments=25 \
+               --lgtm-comment-body='' \
+               --split_workflow=false \
+               --annotations=false \
+               --parallel=0
+        rsync -avzh --ignore-missing-args clang-tidy-review-output.json ../
+        rsync -avzh --ignore-missing-args clang-tidy-review-metadata.json ../
+        rsync -avzh --ignore-missing-args clang_fixes.json ../
 
     - name: Upload Review
       uses: ZedThree/clang-tidy-review/upload@v0.20.1
