@@ -183,6 +183,7 @@ AwsNexradDataProvider::GetTimePointsByDate(
    std::shared_lock lock(p->objectsMutex_);
 
    // Is the date present in the date list?
+   bool currentDatePresent;
    auto currentDateIterator =
       std::find(p->objectDates_.cbegin(), p->objectDates_.cend(), day);
    if (currentDateIterator == p->objectDates_.cend())
@@ -199,6 +200,12 @@ AwsNexradDataProvider::GetTimePointsByDate(
 
       // Re-lock mutex
       lock.lock();
+
+      currentDatePresent = false;
+   }
+   else
+   {
+      currentDatePresent = true;
    }
 
    // Determine objects to retrieve
@@ -216,7 +223,7 @@ AwsNexradDataProvider::GetTimePointsByDate(
 
    // If we haven't updated the most recently queried dates yet, because the
    // date was already cached, update
-   if (currentDateIterator != p->objectDates_.cend())
+   if (currentDatePresent)
    {
       p->UpdateObjectDates(date);
    }

@@ -182,12 +182,9 @@ void Level2ProductView::ConnectRadarProductManager()
            [this](std::shared_ptr<types::RadarProductRecord> record)
            {
               if (record->radar_product_group() ==
-                     common::RadarProductGroup::Level2 &&
-                  std::chrono::floor<std::chrono::seconds>(record->time()) ==
-                     selected_time())
+                  common::RadarProductGroup::Level2)
               {
-                 // If the data associated with the currently selected time is
-                 // reloaded, update the view
+                 // If level 2 data associated was reloaded, update the view
                  Update();
               }
            });
@@ -500,7 +497,7 @@ void Level2ProductView::UpdateColorTableLut()
 
 void Level2ProductView::ComputeSweep()
 {
-   logger_->debug("ComputeSweep()");
+   logger_->trace("ComputeSweep()");
 
    boost::timer::cpu_timer timer;
 
@@ -517,16 +514,9 @@ void Level2ProductView::ComputeSweep()
 
    std::shared_ptr<wsr88d::rda::ElevationScan> radarData;
    std::chrono::system_clock::time_point       requestedTime {selected_time()};
-   std::chrono::system_clock::time_point       foundTime;
-   std::tie(radarData, p->elevationCut_, p->elevationCuts_, foundTime) =
+   std::tie(radarData, p->elevationCut_, p->elevationCuts_, std::ignore) =
       radarProductManager->GetLevel2Data(
          p->dataBlockType_, p->selectedElevation_, requestedTime);
-
-   // If a different time was found than what was requested, update it
-   if (requestedTime != foundTime)
-   {
-      SelectTime(foundTime);
-   }
 
    if (radarData == nullptr)
    {
@@ -538,6 +528,8 @@ void Level2ProductView::ComputeSweep()
       Q_EMIT SweepNotComputed(types::NoUpdateReason::NoChange);
       return;
    }
+
+   logger_->debug("Computing Sweep");
 
    std::size_t radials       = radarData->crbegin()->first + 1;
    std::size_t vertexRadials = radials;

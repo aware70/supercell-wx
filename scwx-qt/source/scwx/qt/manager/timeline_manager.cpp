@@ -336,10 +336,10 @@ void TimelineManager::ReceiveMapWidgetPainted(std::size_t mapIndex)
    std::unique_lock lock {p->radarSweepMonitorMutex_};
 
    // If the radar sweep has been updated
-   if (p->radarSweepsUpdated_.contains(mapIndex))
+   if (p->radarSweepsUpdated_.contains(mapIndex) &&
+       !p->radarSweepsComplete_.contains(mapIndex))
    {
       // Mark the radar sweep complete
-      p->radarSweepsUpdated_.erase(mapIndex);
       p->radarSweepsComplete_.insert(mapIndex);
 
       // If all sweeps have completed rendering
@@ -466,20 +466,12 @@ void TimelineManager::Impl::PlaySync()
 
    // Select the time
    auto selectTimeStart = std::chrono::steady_clock::now();
-   auto [volumeTimeUpdated, selectedTimeUpdated] = SelectTime(newTime);
+   SelectTime(newTime);
    auto selectTimeEnd = std::chrono::steady_clock::now();
    auto elapsedTime   = selectTimeEnd - selectTimeStart;
 
-   if (volumeTimeUpdated)
-   {
-      // Wait for radar sweeps to update
-      RadarSweepMonitorWait(radarSweepMonitorLock);
-   }
-   else
-   {
-      // Disable radar sweep monitor
-      RadarSweepMonitorDisable();
-   }
+   // Wait for radar sweeps to update
+   RadarSweepMonitorWait(radarSweepMonitorLock);
 
    // Calculate the interval until the next update, prior to selecting
    std::chrono::milliseconds interval;
@@ -639,79 +631,63 @@ void TimelineManager::Impl::Step(Direction direction)
    // Take a lock for time selection
    std::unique_lock lock {selectTimeMutex_};
 
-   // Determine time to get active volume times
-   std::chrono::system_clock::time_point queryTime = adjustedTime_;
-   if (queryTime == std::chrono::system_clock::time_point {})
+   std::chrono::system_clock::time_point newTime = selectedTime_;
+
+   if (newTime == std::chrono::system_clock::time_point {})
    {
-      queryTime = std::chrono::system_clock::now();
-   }
-
-   // Request active volume times
-   auto radarProductManager =
-      manager::RadarProductManager::Instance(radarSite_);
-   auto volumeTimes = radarProductManager->GetActiveVolumeTimes(queryTime);
-
-   if (volumeTimes.empty())
-   {
-      logger_->debug("No products to step through");
-      return;
-   }
-
-   // Dynamically update maximum cached volume scans
-   UpdateCacheLimit(radarProductManager, volumeTimes);
-
-   std::set<std::chrono::system_clock::time_point>::const_iterator it;
-
-   if (adjustedTime_ == std::chrono::system_clock::time_point {})
-   {
-      // If the adjusted time is live, get the last element in the set
-      it = std::prev(volumeTimes.cend());
-   }
-   else
-   {
-      // Get the current element in the set
-      it = scwx::util::GetBoundedElementIterator(volumeTimes, adjustedTime_);
-   }
-
-   if (it == volumeTimes.cend())
-   {
-      // Should not get here, but protect against an error
-      logger_->error("No suitable volume time found");
-      return;
-   }
-
-   if (direction == Direction::Back)
-   {
-      // Only if we aren't at the beginning of the volume times set
-      if (it != volumeTimes.cbegin())
+      if (direction == Direction::Back)
       {
-         // Select the previous time
-         adjustedTime_ = *(--it);
-         selectedTime_ = adjustedTime_;
-
-         logger_->debug("Volume time updated: {}",
-                        scwx::util::TimeString(adjustedTime_));
-
-         Q_EMIT self_->LiveStateUpdated(false);
-         Q_EMIT self_->VolumeTimeUpdated(adjustedTime_);
-         Q_EMIT self_->SelectedTimeUpdated(adjustedTime_);
+         newTime = std::chrono::floor<std::chrono::minutes>(
+            std::chrono::system_clock::now());
+      }
+      else
+      {
+         // Cannot step forward any further
+         return;
       }
    }
-   else
+
+   // Unlock prior to selecting time
+   lock.unlock();
+
+   // Lock radar sweep monitor
+   std::unique_lock radarSweepMonitorLock {radarSweepMonitorMutex_};
+
+   // Attempt to step forward or backward up to 30 minutes until an update is
+   // received on at least one map
+   for (std::size_t i = 0; i < 30; ++i)
    {
-      // Only if we aren't at the end of the volume times set
-      if (it != std::prev(volumeTimes.cend()))
+      using namespace std::chrono_literals;
+
+      // Increment/decrement selected time by one minute
+      if (direction == Direction::Back)
       {
-         // Select the next time
-         adjustedTime_ = *(++it);
-         selectedTime_ = adjustedTime_;
+         newTime -= 1min;
+      }
+      else
+      {
+         newTime += 1min;
 
-         logger_->debug("Volume time updated: {}",
-                        scwx::util::TimeString(adjustedTime_));
+         // If the new time is more than 2 minutes in the future, stop stepping
+         if (newTime > std::chrono::system_clock::now() + 2min)
+         {
+            break;
+         }
+      }
 
-         Q_EMIT self_->LiveStateUpdated(false);
-         Q_EMIT self_->VolumeTimeUpdated(adjustedTime_);
-         Q_EMIT self_->SelectedTimeUpdated(adjustedTime_);
+      // Reset radar sweep monitor in preparation for update
+      RadarSweepMonitorReset();
+
+      // Select the time
+      SelectTime(newTime);
+
+      // Wait for radar sweeps to update
+      RadarSweepMonitorWait(radarSweepMonitorLock);
+
+      // Check for updates
+      if (!radarSweepsUpdated_.empty())
+      {
+         break;
       }
    }
 }

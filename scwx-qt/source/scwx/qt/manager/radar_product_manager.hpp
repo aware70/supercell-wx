@@ -132,6 +132,7 @@ public:
 
    /**
     * @brief Set the maximum number of products of each type that may be cached.
+    * The cache limit cannot be set lower than 6.
     *
     * @param [in] cacheLimit The maximum number of products of each type
     */

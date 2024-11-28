@@ -241,7 +241,7 @@ public:
 
    std::vector<map::MapWidget*> maps_;
 
-   std::chrono::system_clock::time_point volumeTime_ {};
+   std::chrono::system_clock::time_point selectedTime_ {};
 
 public slots:
    void UpdateMapParameters(double latitude,
@@ -997,22 +997,15 @@ void MainWindowImpl::ConnectAnimationSignals()
 
    connect(timelineManager_.get(),
            &manager::TimelineManager::SelectedTimeUpdated,
-           [this]()
-           {
-              for (auto map : maps_)
-              {
-                 QMetaObject::invokeMethod(
-                    map, static_cast<void (QWidget::*)()>(&QWidget::update));
-              }
-           });
-   connect(timelineManager_.get(),
-           &manager::TimelineManager::VolumeTimeUpdated,
            [this](std::chrono::system_clock::time_point dateTime)
            {
-              volumeTime_ = dateTime;
+              selectedTime_ = dateTime;
+
               for (auto map : maps_)
               {
                  map->SelectTime(dateTime);
+                 QMetaObject::invokeMethod(
+                    map, static_cast<void (QWidget::*)()>(&QWidget::update));
               }
            });
 
@@ -1400,7 +1393,8 @@ void MainWindowImpl::SelectRadarProduct(map::MapWidget*           mapWidget,
       UpdateRadarProductSettings();
    }
 
-   mapWidget->SelectRadarProduct(group, productName, productCode, volumeTime_);
+   mapWidget->SelectRadarProduct(
+      group, productName, productCode, selectedTime_);
 }
 
 void MainWindowImpl::SetActiveMap(map::MapWidget* mapWidget)

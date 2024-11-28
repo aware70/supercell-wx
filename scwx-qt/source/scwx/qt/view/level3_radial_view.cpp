@@ -117,7 +117,7 @@ std::tuple<const void*, size_t, size_t> Level3RadialView::GetMomentData() const
 
 void Level3RadialView::ComputeSweep()
 {
-   logger_->debug("ComputeSweep()");
+   logger_->trace("ComputeSweep()");
 
    boost::timer::cpu_timer timer;
 
@@ -184,6 +184,8 @@ void Level3RadialView::ComputeSweep()
       Q_EMIT SweepNotComputed(types::NoUpdateReason::InvalidData);
       return;
    }
+
+   logger_->debug("Computing Sweep");
 
    // A message with radial data should either have a Digital Radial Data
    // Array Packet, or a Radial Data Array Packet

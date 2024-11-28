@@ -101,7 +101,7 @@ std::tuple<const void*, size_t, size_t> Level3RasterView::GetMomentData() const
 
 void Level3RasterView::ComputeSweep()
 {
-   logger_->debug("ComputeSweep()");
+   logger_->trace("ComputeSweep()");
 
    boost::timer::cpu_timer timer;
 
@@ -168,6 +168,8 @@ void Level3RasterView::ComputeSweep()
       Q_EMIT SweepNotComputed(types::NoUpdateReason::InvalidData);
       return;
    }
+
+   logger_->debug("Computing Sweep");
 
    // A message with raster data should have a Raster Data Packet
    std::shared_ptr<wsr88d::rpg::RasterDataPacket> rasterData = nullptr;
