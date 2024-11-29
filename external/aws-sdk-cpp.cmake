@@ -21,6 +21,14 @@ set(MINIMIZE_SIZE      OFF  CACHE BOOL   "If enabled, the SDK will be built via 
 # Save off ${CMAKE_CXX_FLAGS} before modifying compiler settings
 set(CMAKE_CXX_FLAGS_PREV "${CMAKE_CXX_FLAGS}")
 
+# Configure OpenSSL crypto library
+find_package(OpenSSL)
+set(crypto_INCLUDE_DIR ${OpenSSL_INCLUDE_DIR})
+set(crypto_ROOT $<$<CONFIG:Release>:${openssl_PACKAGE_FOLDER_RELEASE}>
+                $<$<CONFIG:Debug>:${openssl_PACKAGE_FOLDER_DEBUG}>)
+set(crypto_SHARED_LIBRARY_ROOT ${crypto_ROOT}) # libcrypto.so libcrypto.dylib
+set(crypto_STATIC_LIBRARY_ROOT ${crypto_ROOT}) # libcrypto.a
+
 # Fix CMake errors for internal variables not set
 include(aws-sdk-cpp/cmake/compiler_settings.cmake)
 set_msvc_warnings()
