@@ -40,6 +40,7 @@ jobs:
             conan_compiler_runtime: --settings compiler.runtime=dynamic
             conan_compiler_libcxx: ''
             conan_package_manager: ''
+            conan_profile: scwx-win64_msvc2022
             artifact_suffix: windows-x64
           - name: linux64_gcc
             os: ubuntu-22.04
@@ -59,6 +60,7 @@ jobs:
             conan_compiler_libcxx: --settings compiler.libcxx=libstdc++
             conan_compiler_runtime: ''
             conan_package_manager: --conf tools.system.package_manager:mode=install --conf tools.system.package_manager:sudo=True
+            conan_profile: scwx-linux_gcc-11
             artifact_suffix: linux-x64
             compiler_packages: ''
           - name: linux64_clang
@@ -79,6 +81,7 @@ jobs:
             conan_compiler_libcxx: --settings compiler.libcxx=libstdc++11
             conan_compiler_runtime: ''
             conan_package_manager: --conf tools.system.package_manager:mode=install --conf tools.system.package_manager:sudo=True
+            conan_profile: scwx-linux_clang-17
             artifact_suffix: linux-clang-x64
             compiler_packages: clang-17
     name: ${{ matrix.name }}
@@ -132,17 +135,14 @@ jobs:
       shell: pwsh
       run: |
         pip install conan
-        conan profile detect
+        conan profile detect -e
+        conan config install `
+          ./source/tools/conan/profiles/${{ matrix.conan_profile }} `
+          -tf profiles
         conan install ./source/ `
           --remote conancenter `
           --build missing `
-          --settings arch=${{ matrix.conan_arch }} `
-          --settings build_type=${{ matrix.build_type }} `
-          --settings compiler="${{ matrix.conan_compiler }}" `
-          --settings compiler.version=${{ matrix.conan_compiler_version }} `
-          --settings compiler.cppstd=${{ matrix.conan_compiler_cppstd }} `
-          ${{ matrix.conan_compiler_libcxx }} `
-          ${{ matrix.conan_compiler_runtime }} `
+          --profile:all ${{ matrix.conan_profile }}
           ${{ matrix.conan_package_manager }}
 
     - name: Build Supercell Wx
@@ -154,7 +154,9 @@ jobs:
           -G Ninja `
           -DCMAKE_BUILD_TYPE="${{ matrix.build_type }}" `
           -DCMAKE_PROJECT_TOP_LEVEL_INCLUDES="${{ github.workspace }}/source/external/cmake-conan/conan_provider.cmake" `
-          -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/supercell-wx"
+          -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/supercell-wx" `
+          -DCONAN_HOST_PROFILE="${{ matrix.conan_profile }}" `
+          -DCONAN_BUILD_PROFILE="${{ matrix.conan_profile }}"
         ninja supercell-wx wxtest
 
     - name: Separate Debug Symbols (Linux)
