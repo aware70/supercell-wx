@@ -288,3 +288,20 @@ jobs:
       with:
         name: supercell-wx-test-logs-${{ matrix.name }}
         path: ${{ github.workspace }}/build/Testing/
+
+    - name: CI Build Directory Listing
+      if: ${{ !cancelled() && startsWith(matrix.os, 'ubuntu') }}
+      shell: bash
+      run: |
+        ls -alRF ./build/
+
+    - name: Upload CI Build Debug
+      if: ${{ !cancelled() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: supercell-wx-ci-debug-logs-${{ matrix.name }}
+        path: |
+          ${{ github.workspace }}/build/.ninja_log
+          ${{ github.workspace }}/build/build.ninja
+          ${{ github.workspace }}/build/CMakeCache.txt
+          ${{ github.workspace }}/build/compile_commands.json
