@@ -10,6 +10,13 @@ conan install . ^
     --remote conancenter ^
     --build missing ^
     --profile:all %conan_profile% ^
+    --settings:all build_type=Debug ^
+    --output-folder %build_dir%/conan
+conan install . ^
+    --remote conancenter ^
+    --build missing ^
+    --profile:all %conan_profile% ^
+    --settings:all build_type=Release ^
     --output-folder %build_dir%/conan
 
 mkdir %build_dir%
