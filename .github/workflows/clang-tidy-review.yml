@@ -82,7 +82,7 @@ jobs:
         mkdir build
         cd build
         mkdir conan
-        conan install ./source/ `
+        conan install ../source/ `
           --remote conancenter `
           --build missing `
           --profile:all ${{ matrix.conan_profile }} `
