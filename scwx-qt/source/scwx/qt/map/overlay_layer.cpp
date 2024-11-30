@@ -328,9 +328,13 @@ void OverlayLayer::Render(const QMapLibre::CustomLayerRenderParameters& params)
       p->activeBoxInner_->SetBorder(1.0f * pixelRatio, {255, 255, 255, 255});
    }
 
+   auto& generalSettings = settings::GeneralSettings::Instance();
+
    // Cursor Icon
-   bool cursorIconVisible = QGuiApplication::keyboardModifiers() &
-                            Qt::KeyboardModifier::ControlModifier;
+   bool cursorIconVisible =
+      generalSettings.cursor_icon_always_on().GetValue() ||
+      (QGuiApplication::keyboardModifiers() &
+       Qt::KeyboardModifier::ControlModifier);
    p->geoIcons_->SetIconVisible(p->cursorIcon_, cursorIconVisible);
    if (cursorIconVisible)
    {
@@ -433,8 +437,6 @@ void OverlayLayer::Render(const QMapLibre::CustomLayerRenderParameters& params)
 
       ImGui::End();
    }
-
-   auto& generalSettings = settings::GeneralSettings::Instance();
 
    // Map Center Icon
    if (params.width != p->lastWidth_ || params.height != p->lastHeight_)
