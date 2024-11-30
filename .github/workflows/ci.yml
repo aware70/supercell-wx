@@ -33,12 +33,6 @@ jobs:
             qt_arch_dir: msvc2022_64
             qt_modules: qtimageformats qtmultimedia qtpositioning qtserialport
             qt_tools: ''
-            conan_arch: x86_64
-            conan_compiler: msvc
-            conan_compiler_version: 194
-            conan_compiler_cppstd: 20
-            conan_compiler_runtime: --settings compiler.runtime=dynamic
-            conan_compiler_libcxx: ''
             conan_package_manager: ''
             conan_profile: scwx-win64_msvc2022
             artifact_suffix: windows-x64
@@ -53,12 +47,6 @@ jobs:
             qt_arch_dir: gcc_64
             qt_modules: qtimageformats qtmultimedia qtpositioning qtserialport
             qt_tools: ''
-            conan_arch: x86_64
-            conan_compiler: gcc
-            conan_compiler_version: 11
-            conan_compiler_cppstd: 20
-            conan_compiler_libcxx: --settings compiler.libcxx=libstdc++
-            conan_compiler_runtime: ''
             conan_package_manager: --conf tools.system.package_manager:mode=install --conf tools.system.package_manager:sudo=True
             conan_profile: scwx-linux_gcc-11
             artifact_suffix: linux-x64
@@ -74,12 +62,6 @@ jobs:
             qt_arch_dir: gcc_64
             qt_modules: qtimageformats qtmultimedia qtpositioning qtserialport
             qt_tools: ''
-            conan_arch: x86_64
-            conan_compiler: clang
-            conan_compiler_version: 17
-            conan_compiler_cppstd: 20
-            conan_compiler_libcxx: --settings compiler.libcxx=libstdc++11
-            conan_compiler_runtime: ''
             conan_package_manager: --conf tools.system.package_manager:mode=install --conf tools.system.package_manager:sudo=True
             conan_profile: scwx-linux_clang-17
             artifact_suffix: linux-clang-x64
