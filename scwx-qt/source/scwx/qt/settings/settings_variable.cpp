@@ -5,6 +5,7 @@
 #include <boost/unordered/unordered_flat_map.hpp>
 #include <boost/uuid/random_generator.hpp>
 #include <fmt/ostream.h>
+#include <fmt/ranges.h>
 
 namespace scwx
 {
