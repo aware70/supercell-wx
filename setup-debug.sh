@@ -8,7 +8,13 @@ qt_version=6.8.0
 qt_arch=gcc_64
 script_dir="$(dirname "$(readlink -f "$0")")"
 
-conan install tools/conan/profiles/${conan_profile} -tf profiles
+conan config install tools/conan/profiles/${conan_profile} -tf profiles
+conan install . \
+    --remote conancenter \
+    --build missing \
+    --profile:all ${conan_profile} \
+    --settings:all build_type=${build_type} \
+    --output-folder ${build_dir}/conan
 
 mkdir -p ${build_dir}
 cmake -B ${build_dir} -S . \
