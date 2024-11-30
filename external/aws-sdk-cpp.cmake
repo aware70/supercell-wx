@@ -24,8 +24,16 @@ set(CMAKE_CXX_FLAGS_PREV "${CMAKE_CXX_FLAGS}")
 # Configure OpenSSL crypto library
 find_package(OpenSSL)
 set(crypto_INCLUDE_DIR ${OpenSSL_INCLUDE_DIR})
-set(crypto_ROOT $<$<CONFIG:Release>:${openssl_PACKAGE_FOLDER_RELEASE}>
-                $<$<CONFIG:Debug>:${openssl_PACKAGE_FOLDER_DEBUG}>)
+
+# FIXME:
+# Cannot use a generator expression here, since this is needed at config time.
+# But, this breaks multi-config. Need to find a better solution.
+if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+    set(crypto_ROOT ${openssl_PACKAGE_FOLDER_DEBUG})
+else()
+    set(crypto_ROOT ${openssl_PACKAGE_FOLDER_RELEASE})
+endif()
+
 set(crypto_SHARED_LIBRARY_ROOT ${crypto_ROOT}) # libcrypto.so libcrypto.dylib
 set(crypto_STATIC_LIBRARY_ROOT ${crypto_ROOT}) # libcrypto.a
 
