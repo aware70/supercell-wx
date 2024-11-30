@@ -1,6 +1,7 @@
 from conan import ConanFile
 from conan.tools.cmake import CMake
 from conan.tools.files import copy
+import os
 
 class SupercellWxConan(ConanFile):
     settings   = ("os", "compiler", "build_type", "arch")
@@ -33,11 +34,16 @@ class SupercellWxConan(ConanFile):
             self.requires("onetbb/2021.12.0")
 
     def generate(self):
+        build_folder = os.path.join(self.build_folder,
+                                    "..",
+                                    str(self.settings.build_type),
+                                    self.cpp_info.bindirs[0])
+
         for dep in self.dependencies.values():
             if dep.cpp_info.bindirs:
-                copy(self, "*.dll", dep.cpp_info.bindirs[0], self.build_folder)
+                copy(self, "*.dll", dep.cpp_info.bindirs[0], build_folder)
             if dep.cpp_info.libdirs:
-                copy(self, "*.dylib", dep.cpp_info.libdirs[0], self.build_folder)
+                copy(self, "*.dylib", dep.cpp_info.libdirs[0], build_folder)
 
     def build(self):
         cmake = CMake(self)
