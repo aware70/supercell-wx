@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.24)
 set(PROJECT_NAME scwx-aws-sdk-cpp)
 
 set(AWS_SDK_WARNINGS_ARE_ERRORS OFF)
@@ -20,6 +20,10 @@ set(MINIMIZE_SIZE      OFF  CACHE BOOL   "If enabled, the SDK will be built via 
 
 # Save off ${CMAKE_CXX_FLAGS} before modifying compiler settings
 set(CMAKE_CXX_FLAGS_PREV "${CMAKE_CXX_FLAGS}")
+
+# Configure OpenSSL crypto library
+find_package(OpenSSL)
+add_library(crypto ALIAS OpenSSL::Crypto)
 
 # Fix CMake errors for internal variables not set
 include(aws-sdk-cpp/cmake/compiler_settings.cmake)
