@@ -24,12 +24,8 @@ jobs:
             qt_arch_aqt: linux_gcc_64
             qt_modules: qtimageformats qtmultimedia qtpositioning qtserialport
             qt_tools: ''
-            conan_arch: x86_64
-            conan_compiler: clang
-            conan_compiler_version: 17
-            conan_compiler_libcxx: --settings compiler.libcxx=libstdc++11
-            conan_compiler_runtime: ''
             conan_package_manager: --conf tools.system.package_manager:mode=install --conf tools.system.package_manager:sudo=True
+            conan_profile: scwx-linux_clang-17
             compiler_packages: clang-17 clang-tidy-17
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
@@ -78,28 +74,33 @@ jobs:
     - name: Install Conan Packages
       shell: pwsh
       run: |
-        pip install "conan<2.0"
-        conan profile new default --detect
+        pip install conan
+        conan profile detect -e
+        conan config install `
+          ./source/tools/conan/profiles/${{ matrix.conan_profile }} `
+          -tf profiles
+        mkdir build
+        cd build
+        mkdir conan
         conan install ./source/ `
           --remote conancenter `
           --build missing `
-          --settings arch=${{ matrix.conan_arch }} `
-          --settings build_type=${{ matrix.build_type }} `
-          --settings compiler="${{ matrix.conan_compiler }}" `
-          --settings compiler.version=${{ matrix.conan_compiler_version }} `
-          ${{ matrix.conan_compiler_libcxx }} `
-          ${{ matrix.conan_compiler_runtime }} `
+          --profile:all ${{ matrix.conan_profile }} `
+          --settings:all build_type=${{ matrix.build_type }} `
+          --output-folder ./conan/ `
           ${{ matrix.conan_package_manager }}
 
     - name: Autogenerate
       shell: pwsh
       run: |
-        mkdir build
         cd build
         cmake ../source/ `
           -G Ninja `
           -DCMAKE_BUILD_TYPE="${{ matrix.build_type }}" `
+          -DCMAKE_PROJECT_TOP_LEVEL_INCLUDES="${{ github.workspace }}/source/external/cmake-conan/conan_provider.cmake" `
           -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/supercell-wx" `
+          -DCONAN_HOST_PROFILE="${{ matrix.conan_profile }}" `
+          -DCONAN_BUILD_PROFILE="${{ matrix.conan_profile }}" `
           -DCMAKE_EXPORT_COMPILE_COMMANDS=on
         ninja scwx-qt_generate_counties_db `
               scwx-qt_generate_versions `
