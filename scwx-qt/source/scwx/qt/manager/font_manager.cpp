@@ -15,6 +15,7 @@
 #include <boost/container_hash/hash.hpp>
 #include <boost/unordered/unordered_flat_map.hpp>
 #include <boost/unordered/unordered_flat_set.hpp>
+#include <fmt/ranges.h>
 #include <fontconfig/fontconfig.h>
 
 namespace scwx
