@@ -139,18 +139,19 @@ jobs:
         conan config install `
           ./source/tools/conan/profiles/${{ matrix.conan_profile }} `
           -tf profiles
-        mkdir -p build
+        mkdir build
         cd build
+        mkdir conan
         conan install ../source/ `
           --remote conancenter `
           --build missing `
           --profile:all ${{ matrix.conan_profile }} `
+          --output-folder ./conan/ `
           ${{ matrix.conan_package_manager }}
 
     - name: Build Supercell Wx
       shell: pwsh
       run: |
-        mkdir -p build
         cd build
         cmake ../source/ `
           -G Ninja `
