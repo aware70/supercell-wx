@@ -128,6 +128,7 @@ jobs:
           --remote conancenter `
           --build missing `
           --profile:all ${{ matrix.conan_profile }} `
+          --settings:all build_type=${{ matrix.build_type }} `
           --output-folder ./conan/ `
           ${{ matrix.conan_package_manager }}
 
