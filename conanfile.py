@@ -7,6 +7,7 @@ class SupercellWxConan(ConanFile):
     requires   = ("boost/1.86.0",
                   "cpr/1.11.0",
                   "fontconfig/2.15.0",
+                  "freetype/2.13.2",
                   "geographiclib/2.4",
                   "geos/3.13.0",
                   "glew/2.2.0",
@@ -28,7 +29,6 @@ class SupercellWxConan(ConanFile):
                        "openssl/*:shared"   : True}
 
     def requirements(self):
-        self.requires("freetype/2.13.3", override=True)
         if self.settings.os == "Linux":
             self.requires("onetbb/2021.12.0")
 
