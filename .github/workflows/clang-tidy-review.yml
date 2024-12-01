@@ -126,7 +126,7 @@ jobs:
                --cmake-command='' \
                --max-comments=25 \
                --lgtm-comment-body='' \
-               --split_workflow=false \
+               --split_workflow=true \
                --annotations=false \
                --parallel=0
         rsync -avzh --ignore-missing-args clang-tidy-review-output.json ../
