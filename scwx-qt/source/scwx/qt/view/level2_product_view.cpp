@@ -703,33 +703,88 @@ void Level2ProductView::ComputeSweep()
          // Store data moment value
          if (dataMomentsArray8 != nullptr)
          {
-            std::uint8_t dataValue = dataMomentsArray8[i];
-            if (dataValue < snrThreshold && dataValue != RANGE_FOLDED)
+            if (!smoothingEnabled)
             {
-               continue;
-            }
-
-            for (std::size_t m = 0; m < vertexCount; m++)
-            {
-               dataMoments8[mIndex++] = dataMomentsArray8[i];
-
-               if (cfpMomentsArray != nullptr)
+               std::uint8_t dataValue = dataMomentsArray8[i];
+               if (dataValue < snrThreshold && dataValue != RANGE_FOLDED)
                {
-                  cfpMoments[mIndex - 1] = cfpMomentsArray[i];
+                  continue;
                }
+
+               for (std::size_t m = 0; m < vertexCount; m++)
+               {
+                  dataMoments8[mIndex++] = dataMomentsArray8[i];
+
+                  if (cfpMomentsArray != nullptr)
+                  {
+                     cfpMoments[mIndex - 1] = cfpMomentsArray[i];
+                  }
+               }
+            }
+            else if (gate > 0)
+            {
+               // TODO: What is the correct value for dm3?
+               const std::size_t dm1 = i;
+               const std::size_t dm2 = dm1 + 1;
+               const std::size_t dm3 = i;
+               const std::size_t dm4 = dm3 + 1;
+
+               // TODO: Validate indices are all in range
+
+               if (dataMomentsArray8[dm1] < snrThreshold &&
+                   dataMomentsArray8[dm1] != RANGE_FOLDED &&
+                   dataMomentsArray8[dm2] < snrThreshold &&
+                   dataMomentsArray8[dm2] != RANGE_FOLDED &&
+                   dataMomentsArray8[dm3] < snrThreshold &&
+                   dataMomentsArray8[dm3] != RANGE_FOLDED &&
+                   dataMomentsArray8[dm4] < snrThreshold &&
+                   dataMomentsArray8[dm4] != RANGE_FOLDED)
+               {
+                  // Skip only if all data moments are hidden
+                  continue;
+               }
+
+               // The order must match the store vertices section below
+               dataMoments8[mIndex++] = dataMomentsArray8[dm1];
+               dataMoments8[mIndex++] = dataMomentsArray8[dm2];
+               dataMoments8[mIndex++] = dataMomentsArray8[dm4];
+               dataMoments8[mIndex++] = dataMomentsArray8[dm1];
+               dataMoments8[mIndex++] = dataMomentsArray8[dm3];
+               dataMoments8[mIndex++] = dataMomentsArray8[dm4];
+
+               // cfpMoments is unused, so not populated here
+            }
+            else
+            {
+               // If smoothing is enabled, gate should never start at zero
+               // (radar site origin)
+               continue;
             }
          }
          else
          {
-            std::uint16_t dataValue = dataMomentsArray16[i];
-            if (dataValue < snrThreshold && dataValue != RANGE_FOLDED)
+            if (!smoothingEnabled)
             {
-               continue;
-            }
+               std::uint16_t dataValue = dataMomentsArray16[i];
+               if (dataValue < snrThreshold && dataValue != RANGE_FOLDED)
+               {
+                  continue;
+               }
 
-            for (std::size_t m = 0; m < vertexCount; m++)
+               for (std::size_t m = 0; m < vertexCount; m++)
+               {
+                  dataMoments16[mIndex++] = dataMomentsArray16[i];
+               }
+            }
+            else if (gate > 0)
             {
-               dataMoments16[mIndex++] = dataMomentsArray16[i];
+               // TODO: Copy from dm8
+            }
+            else
+            {
+               // If smoothing is enabled, gate should never start at zero
+               // (radar site origin)
+               continue;
             }
          }
 
