@@ -106,7 +106,8 @@ public:
    };
 
    void ComputeCoordinates(
-      const std::shared_ptr<wsr88d::rda::ElevationScan>& radarData);
+      const std::shared_ptr<wsr88d::rda::ElevationScan>& radarData,
+      bool                                               smoothingEnabled);
 
    void SetProduct(const std::string& productName);
    void SetProduct(common::Level2Product product);
@@ -528,6 +529,9 @@ void Level2ProductView::ComputeSweep()
       return;
    }
 
+   // TODO: Where does this come from?
+   bool smoothingEnabled = false;
+
    logger_->debug("Computing Sweep");
 
    std::size_t radials       = radarData->crbegin()->first + 1;
@@ -546,7 +550,7 @@ void Level2ProductView::ComputeSweep()
    vertexRadials =
       std::min<std::size_t>(vertexRadials, common::MAX_0_5_DEGREE_RADIALS);
 
-   p->ComputeCoordinates(radarData);
+   p->ComputeCoordinates(radarData, smoothingEnabled);
 
    const std::vector<float>& coordinates = p->coordinates_;
 
@@ -818,7 +822,8 @@ void Level2ProductView::ComputeSweep()
 }
 
 void Level2ProductView::Impl::ComputeCoordinates(
-   const std::shared_ptr<wsr88d::rda::ElevationScan>& radarData)
+   const std::shared_ptr<wsr88d::rda::ElevationScan>& radarData,
+   bool                                               smoothingEnabled)
 {
    logger_->debug("ComputeCoordinates()");
 
@@ -858,6 +863,14 @@ void Level2ProductView::Impl::ComputeCoordinates(
    auto radials = boost::irange<std::uint32_t>(0u, numRadials);
    auto gates   = boost::irange<std::uint32_t>(0u, numRangeBins);
 
+   const float gateRangeOffset = (smoothingEnabled) ?
+                                    // Center of the first gate is half the gate
+                                    // size distance from the radar site
+                                    0.5f :
+                                    // Far end of the first gate is the gate
+                                    // size distance from the radar site
+                                    1.0f;
+
    std::for_each(
       std::execution::par_unseq,
       radials.begin(),
@@ -867,7 +880,7 @@ void Level2ProductView::Impl::ComputeCoordinates(
          units::degrees<float> angle {};
 
          auto radialData = radarData->find(radial);
-         if (radialData != radarData->cend())
+         if (radialData != radarData->cend() && !smoothingEnabled)
          {
             angle = radialData->second->azimuth_angle();
          }
@@ -878,8 +891,42 @@ void Level2ProductView::Impl::ComputeCoordinates(
             auto prevRadial2 = radarData->find(
                (radial >= 2) ? radial - 2 : numRadials - (2 - radial));
 
-            if (prevRadial1 != radarData->cend() &&
-                prevRadial2 != radarData->cend())
+            if (radialData != radarData->cend() &&
+                prevRadial1 != radarData->cend() && smoothingEnabled)
+            {
+               const units::degrees<float> currentAngle =
+                  radialData->second->azimuth_angle();
+               const units::degrees<float> prevAngle =
+                  prevRadial1->second->azimuth_angle();
+
+               // No wrapping required since angle is only used for geodesic
+               // calculation
+               const units::degrees<float> deltaAngle =
+                  currentAngle - prevAngle;
+
+               // Delta scale is half the delta angle to reach the center of the
+               // bin, because smoothing is enabled
+               constexpr float deltaScale = 0.5f;
+
+               angle = currentAngle + deltaAngle * deltaScale;
+            }
+            else if (radialData != radarData->cend() && smoothingEnabled)
+            {
+               const units::degrees<float> currentAngle =
+                  radialData->second->azimuth_angle();
+
+               // Assume a half degree delta if there aren't enough angles
+               // to determine a delta angle
+               constexpr units::degrees<float> deltaAngle {0.5f};
+
+               // Delta scale is half the delta angle to reach the center of the
+               // bin, because smoothing is enabled
+               constexpr float deltaScale = 0.5f;
+
+               angle = currentAngle + deltaAngle * deltaScale;
+            }
+            else if (prevRadial1 != radarData->cend() &&
+                     prevRadial2 != radarData->cend())
             {
                const units::degrees<float> prevAngle1 =
                   prevRadial1->second->azimuth_angle();
@@ -890,7 +937,15 @@ void Level2ProductView::Impl::ComputeCoordinates(
                // calculation
                const units::degrees<float> deltaAngle = prevAngle1 - prevAngle2;
 
-               angle = prevAngle1 + deltaAngle;
+               const float deltaScale =
+                  (smoothingEnabled) ?
+                     // Delta scale is 1.5x the delta angle to reach the center
+                     // of the next bin, because smoothing is enabled
+                     1.5f :
+                     // Delta scale is 1.0x the delta angle
+                     1.0f;
+
+               angle = prevAngle1 + deltaAngle * deltaScale;
             }
             else if (prevRadial1 != radarData->cend())
             {
@@ -901,7 +956,15 @@ void Level2ProductView::Impl::ComputeCoordinates(
                // to determine a delta angle
                constexpr units::degrees<float> deltaAngle {0.5f};
 
-               angle = prevAngle1 + deltaAngle;
+               const float deltaScale =
+                  (smoothingEnabled) ?
+                     // Delta scale is 1.5x the delta angle to reach the center
+                     // of the next bin, because smoothing is enabled
+                     1.5f :
+                     // Delta scale is 1.0x the delta angle
+                     1.0f;
+
+               angle = prevAngle1 + deltaAngle * deltaScale;
             }
             else
             {
@@ -917,7 +980,8 @@ void Level2ProductView::Impl::ComputeCoordinates(
                        {
                           const std::uint32_t radialGate =
                              radial * common::MAX_DATA_MOMENT_GATES + gate;
-                          const float       range  = (gate + 1) * gateSize;
+                          const float range =
+                             (gate + gateRangeOffset) * gateSize;
                           const std::size_t offset = radialGate * 2;
 
                           double latitude;
