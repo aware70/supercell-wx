@@ -53,11 +53,10 @@ static const std::unordered_map<common::Level2Product, std::string>
                   {common::Level2Product::CorrelationCoefficient, "%"},
                   {common::Level2Product::ClutterFilterPowerRemoved, "dB"}};
 
-class Level2ProductViewImpl
+class Level2ProductView::Impl
 {
 public:
-   explicit Level2ProductViewImpl(Level2ProductView*    self,
-                                  common::Level2Product product) :
+   explicit Impl(Level2ProductView* self, common::Level2Product product) :
        self_ {self},
        product_ {product},
        selectedElevation_ {0.0f},
@@ -94,7 +93,7 @@ public:
       UpdateOtherUnits(unitSettings.other_units().GetValue());
       UpdateSpeedUnits(unitSettings.speed_units().GetValue());
    }
-   ~Level2ProductViewImpl()
+   ~Impl()
    {
       auto& unitSettings = settings::UnitSettings::Instance();
 
@@ -164,7 +163,7 @@ Level2ProductView::Level2ProductView(
    common::Level2Product                         product,
    std::shared_ptr<manager::RadarProductManager> radarProductManager) :
     RadarProductView(radarProductManager),
-    p(std::make_unique<Level2ProductViewImpl>(this, product))
+    p(std::make_unique<Impl>(this, product))
 {
    ConnectRadarProductManager();
 }
@@ -379,12 +378,12 @@ void Level2ProductView::SelectProduct(const std::string& productName)
    p->SetProduct(productName);
 }
 
-void Level2ProductViewImpl::SetProduct(const std::string& productName)
+void Level2ProductView::Impl::SetProduct(const std::string& productName)
 {
    SetProduct(common::GetLevel2Product(productName));
 }
 
-void Level2ProductViewImpl::SetProduct(common::Level2Product product)
+void Level2ProductView::Impl::SetProduct(common::Level2Product product)
 {
    product_ = product;
 
@@ -401,12 +400,12 @@ void Level2ProductViewImpl::SetProduct(common::Level2Product product)
    }
 }
 
-void Level2ProductViewImpl::UpdateOtherUnits(const std::string& name)
+void Level2ProductView::Impl::UpdateOtherUnits(const std::string& name)
 {
    otherUnits_ = types::GetOtherUnitsFromName(name);
 }
 
-void Level2ProductViewImpl::UpdateSpeedUnits(const std::string& name)
+void Level2ProductView::Impl::UpdateSpeedUnits(const std::string& name)
 {
    speedUnits_ = types::GetSpeedUnitsFromName(name);
 }
@@ -536,8 +535,7 @@ void Level2ProductView::ComputeSweep()
 
    // When there is missing data, insert another empty vertex radial at the end
    // to avoid stretching
-   const bool isRadarDataIncomplete =
-      Level2ProductViewImpl::IsRadarDataIncomplete(radarData);
+   const bool isRadarDataIncomplete = Impl::IsRadarDataIncomplete(radarData);
    if (isRadarDataIncomplete)
    {
       ++vertexRadials;
@@ -819,7 +817,7 @@ void Level2ProductView::ComputeSweep()
    Q_EMIT SweepComputed();
 }
 
-void Level2ProductViewImpl::ComputeCoordinates(
+void Level2ProductView::Impl::ComputeCoordinates(
    const std::shared_ptr<wsr88d::rda::ElevationScan>& radarData)
 {
    logger_->debug("ComputeCoordinates()");
@@ -940,7 +938,7 @@ void Level2ProductViewImpl::ComputeCoordinates(
    logger_->debug("Coordinates calculated in {}", timer.format(6, "%ws"));
 }
 
-bool Level2ProductViewImpl::IsRadarDataIncomplete(
+bool Level2ProductView::Impl::IsRadarDataIncomplete(
    const std::shared_ptr<const wsr88d::rda::ElevationScan>& radarData)
 {
    // Assume the data is incomplete when the delta between the first and last
@@ -1003,7 +1001,7 @@ Level2ProductView::GetBinLevel(const common::Coordinate& coordinate) const
       static_cast<std::uint16_t>(radarData->crbegin()->first + 1);
 
    // Add an extra radial when incomplete data exists
-   if (Level2ProductViewImpl::IsRadarDataIncomplete(radarData))
+   if (Impl::IsRadarDataIncomplete(radarData))
    {
       ++numRadials;
    }
