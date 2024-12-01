@@ -629,11 +629,13 @@ void Level2ProductView::ComputeSweep()
    // Start radial is always 0, as coordinates are calculated for each sweep
    constexpr std::uint16_t startRadial = 0u;
 
-   for (auto& radialPair : *radarData)
+   for (auto it = radarData->cbegin(); it != radarData->cend(); ++it)
    {
+      const auto&   radialPair = *it;
       std::uint16_t radial     = radialPair.first;
-      auto&         radialData = radialPair.second;
-      auto momentData = radialData->moment_data_block(p->dataBlockType_);
+      const auto&   radialData = radialPair.second;
+      std::shared_ptr<wsr88d::rda::GenericRadarData::MomentDataBlock>
+         momentData = radialData->moment_data_block(p->dataBlockType_);
 
       if (momentData0->data_word_size() != momentData->data_word_size())
       {
@@ -654,13 +656,9 @@ void Level2ProductView::ComputeSweep()
       const std::int32_t gateSize =
          std::max<std::int32_t>(1, dataMomentInterval / gateSizeMeters);
 
-      // TODO: Does startGate need to increase by 1 when smoothing? What about
-      // gate 1840? Does last gate need extended?
-
       // Compute gate range [startGate, endGate)
-      const std::int32_t gateOffset = (smoothingEnabled) ? 1 : 0;
-      const std::int32_t startGate =
-         (dataMomentRange - dataMomentIntervalH) / gateSizeMeters + gateOffset;
+      std::int32_t startGate =
+         (dataMomentRange - dataMomentIntervalH) / gateSizeMeters;
       const std::int32_t numberOfDataMomentGates =
          std::min<std::int32_t>(momentData->number_of_data_moment_gates(),
                                 static_cast<std::int32_t>(gates));
@@ -668,9 +666,19 @@ void Level2ProductView::ComputeSweep()
          startGate + numberOfDataMomentGates * gateSize,
          static_cast<std::int32_t>(common::MAX_DATA_MOMENT_GATES));
 
-      const std::uint8_t*  dataMomentsArray8  = nullptr;
-      const std::uint16_t* dataMomentsArray16 = nullptr;
-      const std::uint8_t*  cfpMomentsArray    = nullptr;
+      if (smoothingEnabled)
+      {
+         // If smoothing is enabled, the start gate is incremented by one, as we
+         // are skipping the radar site origin. The end gate is unaffected, as
+         // we need to draw one less data point.
+         ++startGate;
+      }
+
+      const std::uint8_t*  dataMomentsArray8      = nullptr;
+      const std::uint16_t* dataMomentsArray16     = nullptr;
+      const std::uint8_t*  nextDataMomentsArray8  = nullptr;
+      const std::uint16_t* nextDataMomentsArray16 = nullptr;
+      const std::uint8_t*  cfpMomentsArray        = nullptr;
 
       if (momentData->data_word_size() == 8)
       {
@@ -688,6 +696,38 @@ void Level2ProductView::ComputeSweep()
          cfpMomentsArray = reinterpret_cast<const std::uint8_t*>(
             radialData->moment_data_block(wsr88d::rda::DataBlockType::MomentCfp)
                ->data_moments());
+      }
+
+      std::shared_ptr<wsr88d::rda::GenericRadarData::MomentDataBlock>
+                   nextMomentData              = nullptr;
+      std::int32_t numberOfNextDataMomentGates = 0;
+      if (smoothingEnabled)
+      {
+         const auto& nextRadialPair = *(++it);
+         const auto& nextRadialData = nextRadialPair.second;
+         nextMomentData = nextRadialData->moment_data_block(p->dataBlockType_);
+
+         if (momentData->data_word_size() != nextMomentData->data_word_size())
+         {
+            // Data should be consistent between radials
+            logger_->warn("Invalid data moment size");
+            continue;
+         }
+
+         if (nextMomentData->data_word_size() == 8)
+         {
+            nextDataMomentsArray8 = reinterpret_cast<const std::uint8_t*>(
+               nextMomentData->data_moments());
+         }
+         else
+         {
+            nextDataMomentsArray16 = reinterpret_cast<const std::uint16_t*>(
+               nextMomentData->data_moments());
+         }
+
+         numberOfNextDataMomentGates = std::min<std::int32_t>(
+            nextMomentData->number_of_data_moment_gates(),
+            static_cast<std::int32_t>(gates));
       }
 
       for (std::int32_t gate = startGate, i = 0; gate + gateSize <= endGate;
@@ -723,22 +763,26 @@ void Level2ProductView::ComputeSweep()
             }
             else if (gate > 0)
             {
-               // TODO: What is the correct value for dm3?
-               const std::size_t dm1 = i;
-               const std::size_t dm2 = dm1 + 1;
-               const std::size_t dm3 = i;
-               const std::size_t dm4 = dm3 + 1;
+               const std::size_t  dm1 = i;
+               const std::size_t  dm2 = dm1 + 1;
+               const std::size_t& dm3 = dm1;
+               const std::size_t& dm4 = dm2;
 
-               // TODO: Validate indices are all in range
+               // Validate indices are all in range
+               if (dm2 >= numberOfDataMomentGates ||
+                   dm4 >= numberOfNextDataMomentGates)
+               {
+                  continue;
+               }
 
                if (dataMomentsArray8[dm1] < snrThreshold &&
                    dataMomentsArray8[dm1] != RANGE_FOLDED &&
                    dataMomentsArray8[dm2] < snrThreshold &&
                    dataMomentsArray8[dm2] != RANGE_FOLDED &&
-                   dataMomentsArray8[dm3] < snrThreshold &&
-                   dataMomentsArray8[dm3] != RANGE_FOLDED &&
-                   dataMomentsArray8[dm4] < snrThreshold &&
-                   dataMomentsArray8[dm4] != RANGE_FOLDED)
+                   nextDataMomentsArray8[dm3] < snrThreshold &&
+                   nextDataMomentsArray8[dm3] != RANGE_FOLDED &&
+                   nextDataMomentsArray8[dm4] < snrThreshold &&
+                   nextDataMomentsArray8[dm4] != RANGE_FOLDED)
                {
                   // Skip only if all data moments are hidden
                   continue;
@@ -747,10 +791,10 @@ void Level2ProductView::ComputeSweep()
                // The order must match the store vertices section below
                dataMoments8[mIndex++] = dataMomentsArray8[dm1];
                dataMoments8[mIndex++] = dataMomentsArray8[dm2];
-               dataMoments8[mIndex++] = dataMomentsArray8[dm4];
+               dataMoments8[mIndex++] = nextDataMomentsArray8[dm4];
                dataMoments8[mIndex++] = dataMomentsArray8[dm1];
-               dataMoments8[mIndex++] = dataMomentsArray8[dm3];
-               dataMoments8[mIndex++] = dataMomentsArray8[dm4];
+               dataMoments8[mIndex++] = nextDataMomentsArray8[dm3];
+               dataMoments8[mIndex++] = nextDataMomentsArray8[dm4];
 
                // cfpMoments is unused, so not populated here
             }
@@ -778,7 +822,38 @@ void Level2ProductView::ComputeSweep()
             }
             else if (gate > 0)
             {
-               // TODO: Copy from dm8
+               const std::size_t  dm1 = i;
+               const std::size_t  dm2 = dm1 + 1;
+               const std::size_t& dm3 = dm1;
+               const std::size_t& dm4 = dm2;
+
+               // Validate indices are all in range
+               if (dm2 >= numberOfDataMomentGates ||
+                   dm4 >= numberOfNextDataMomentGates)
+               {
+                  continue;
+               }
+
+               if (dataMomentsArray16[dm1] < snrThreshold &&
+                   dataMomentsArray16[dm1] != RANGE_FOLDED &&
+                   dataMomentsArray16[dm2] < snrThreshold &&
+                   dataMomentsArray16[dm2] != RANGE_FOLDED &&
+                   nextDataMomentsArray16[dm3] < snrThreshold &&
+                   nextDataMomentsArray16[dm3] != RANGE_FOLDED &&
+                   nextDataMomentsArray16[dm4] < snrThreshold &&
+                   nextDataMomentsArray16[dm4] != RANGE_FOLDED)
+               {
+                  // Skip only if all data moments are hidden
+                  continue;
+               }
+
+               // The order must match the store vertices section below
+               dataMoments16[mIndex++] = dataMomentsArray16[dm1];
+               dataMoments16[mIndex++] = dataMomentsArray16[dm2];
+               dataMoments16[mIndex++] = nextDataMomentsArray16[dm4];
+               dataMoments16[mIndex++] = dataMomentsArray16[dm1];
+               dataMoments16[mIndex++] = nextDataMomentsArray16[dm3];
+               dataMoments16[mIndex++] = nextDataMomentsArray16[dm4];
             }
             else
             {
