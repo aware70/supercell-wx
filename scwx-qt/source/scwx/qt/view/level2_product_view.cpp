@@ -540,7 +540,7 @@ void Level2ProductView::ComputeSweep()
    // When there is missing data, insert another empty vertex radial at the end
    // to avoid stretching
    const bool isRadarDataIncomplete = Impl::IsRadarDataIncomplete(radarData);
-   if (isRadarDataIncomplete)
+   if (isRadarDataIncomplete && !smoothingEnabled)
    {
       ++vertexRadials;
    }
@@ -654,9 +654,13 @@ void Level2ProductView::ComputeSweep()
       const std::int32_t gateSize =
          std::max<std::int32_t>(1, dataMomentInterval / gateSizeMeters);
 
+      // TODO: Does startGate need to increase by 1 when smoothing? What about
+      // gate 1840? Does last gate need extended?
+
       // Compute gate range [startGate, endGate)
+      const std::int32_t gateOffset = (smoothingEnabled) ? 1 : 0;
       const std::int32_t startGate =
-         (dataMomentRange - dataMomentIntervalH) / gateSizeMeters;
+         (dataMomentRange - dataMomentIntervalH) / gateSizeMeters + gateOffset;
       const std::int32_t numberOfDataMomentGates =
          std::min<std::int32_t>(momentData->number_of_data_moment_gates(),
                                 static_cast<std::int32_t>(gates));
@@ -732,6 +736,14 @@ void Level2ProductView::ComputeSweep()
          // Store vertices
          if (gate > 0)
          {
+            // Draw two triangles per gate
+            //
+            // 2 +---+ 4
+            //   |  /|
+            //   | / |
+            //   |/  |
+            // 1 +---+ 3
+
             const std::uint16_t baseCoord = gate - 1;
 
             std::size_t offset1 = ((startRadial + radial) % vertexRadials *
@@ -752,17 +764,17 @@ void Level2ProductView::ComputeSweep()
             vertices[vIndex++] = coordinates[offset2];
             vertices[vIndex++] = coordinates[offset2 + 1];
 
-            vertices[vIndex++] = coordinates[offset3];
-            vertices[vIndex++] = coordinates[offset3 + 1];
+            vertices[vIndex++] = coordinates[offset4];
+            vertices[vIndex++] = coordinates[offset4 + 1];
+
+            vertices[vIndex++] = coordinates[offset1];
+            vertices[vIndex++] = coordinates[offset1 + 1];
 
             vertices[vIndex++] = coordinates[offset3];
             vertices[vIndex++] = coordinates[offset3 + 1];
 
             vertices[vIndex++] = coordinates[offset4];
             vertices[vIndex++] = coordinates[offset4 + 1];
-
-            vertices[vIndex++] = coordinates[offset2];
-            vertices[vIndex++] = coordinates[offset2 + 1];
 
             vertexCount = 6;
          }
