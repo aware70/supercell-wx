@@ -703,7 +703,14 @@ void Level2ProductView::ComputeSweep()
       std::int32_t numberOfNextDataMomentGates = 0;
       if (smoothingEnabled)
       {
-         const auto& nextRadialPair = *(++it);
+         // Smoothing requires the next radial pair as well
+         auto nextIt = std::next(it);
+         if (nextIt == radarData->cend())
+         {
+            continue;
+         }
+
+         const auto& nextRadialPair = *(nextIt);
          const auto& nextRadialData = nextRadialPair.second;
          nextMomentData = nextRadialData->moment_data_block(p->dataBlockType_);
 
