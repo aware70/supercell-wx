@@ -16,7 +16,7 @@ layout (location = 0) out vec4 fragColor;
 
 void main()
 {
-   float texCoord = float(dataMoment - uDataMomentOffset) / uDataMomentScale;
+   float texCoord = (float(dataMoment) - float(uDataMomentOffset)) / uDataMomentScale;
 
    if (uCFPEnabled && cfpMoment > 8u)
    {
