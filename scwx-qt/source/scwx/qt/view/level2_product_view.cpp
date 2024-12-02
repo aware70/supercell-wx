@@ -770,38 +770,34 @@ void Level2ProductView::ComputeSweep()
             }
             else if (gate > 0)
             {
-               const std::size_t  dm1 = i;
-               const std::size_t  dm2 = dm1 + 1;
-               const std::size_t& dm3 = dm1;
-               const std::size_t& dm4 = dm2;
-
                // Validate indices are all in range
-               if (dm2 >= numberOfDataMomentGates ||
-                   dm4 >= numberOfNextDataMomentGates)
+               if (i + 1 >= numberOfDataMomentGates ||
+                   i + 1 >= numberOfNextDataMomentGates)
                {
                   continue;
                }
 
-               if (dataMomentsArray8[dm1] < snrThreshold &&
-                   dataMomentsArray8[dm1] != RANGE_FOLDED &&
-                   dataMomentsArray8[dm2] < snrThreshold &&
-                   dataMomentsArray8[dm2] != RANGE_FOLDED &&
-                   nextDataMomentsArray8[dm3] < snrThreshold &&
-                   nextDataMomentsArray8[dm3] != RANGE_FOLDED &&
-                   nextDataMomentsArray8[dm4] < snrThreshold &&
-                   nextDataMomentsArray8[dm4] != RANGE_FOLDED)
+               const std::uint8_t& dm1 = dataMomentsArray8[i];
+               const std::uint8_t& dm2 = dataMomentsArray8[i + 1];
+               const std::uint8_t& dm3 = nextDataMomentsArray8[i];
+               const std::uint8_t& dm4 = nextDataMomentsArray8[i + 1];
+
+               if (dm1 < snrThreshold && dm1 != RANGE_FOLDED &&
+                   dm2 < snrThreshold && dm2 != RANGE_FOLDED &&
+                   dm3 < snrThreshold && dm3 != RANGE_FOLDED &&
+                   dm4 < snrThreshold && dm4 != RANGE_FOLDED)
                {
                   // Skip only if all data moments are hidden
                   continue;
                }
 
                // The order must match the store vertices section below
-               dataMoments8[mIndex++] = dataMomentsArray8[dm1];
-               dataMoments8[mIndex++] = dataMomentsArray8[dm2];
-               dataMoments8[mIndex++] = nextDataMomentsArray8[dm4];
-               dataMoments8[mIndex++] = dataMomentsArray8[dm1];
-               dataMoments8[mIndex++] = nextDataMomentsArray8[dm3];
-               dataMoments8[mIndex++] = nextDataMomentsArray8[dm4];
+               dataMoments8[mIndex++] = dm1;
+               dataMoments8[mIndex++] = dm2;
+               dataMoments8[mIndex++] = dm4;
+               dataMoments8[mIndex++] = dm1;
+               dataMoments8[mIndex++] = dm3;
+               dataMoments8[mIndex++] = dm4;
 
                // cfpMoments is unused, so not populated here
             }
@@ -829,38 +825,36 @@ void Level2ProductView::ComputeSweep()
             }
             else if (gate > 0)
             {
-               const std::size_t  dm1 = i;
-               const std::size_t  dm2 = dm1 + 1;
-               const std::size_t& dm3 = dm1;
-               const std::size_t& dm4 = dm2;
-
                // Validate indices are all in range
-               if (dm2 >= numberOfDataMomentGates ||
-                   dm4 >= numberOfNextDataMomentGates)
+               if (i + 1 >= numberOfDataMomentGates ||
+                   i + 1 >= numberOfNextDataMomentGates)
                {
                   continue;
                }
 
-               if (dataMomentsArray16[dm1] < snrThreshold &&
-                   dataMomentsArray16[dm1] != RANGE_FOLDED &&
-                   dataMomentsArray16[dm2] < snrThreshold &&
-                   dataMomentsArray16[dm2] != RANGE_FOLDED &&
-                   nextDataMomentsArray16[dm3] < snrThreshold &&
-                   nextDataMomentsArray16[dm3] != RANGE_FOLDED &&
-                   nextDataMomentsArray16[dm4] < snrThreshold &&
-                   nextDataMomentsArray16[dm4] != RANGE_FOLDED)
+               const std::uint8_t& dm1 = dataMomentsArray16[i];
+               const std::uint8_t& dm2 = dataMomentsArray16[i + 1];
+               const std::uint8_t& dm3 = nextDataMomentsArray16[i];
+               const std::uint8_t& dm4 = nextDataMomentsArray16[i + 1];
+
+               if (dm1 < snrThreshold && dm1 != RANGE_FOLDED &&
+                   dm2 < snrThreshold && dm2 != RANGE_FOLDED &&
+                   dm3 < snrThreshold && dm3 != RANGE_FOLDED &&
+                   dm4 < snrThreshold && dm4 != RANGE_FOLDED)
                {
                   // Skip only if all data moments are hidden
                   continue;
                }
 
                // The order must match the store vertices section below
-               dataMoments16[mIndex++] = dataMomentsArray16[dm1];
-               dataMoments16[mIndex++] = dataMomentsArray16[dm2];
-               dataMoments16[mIndex++] = nextDataMomentsArray16[dm4];
-               dataMoments16[mIndex++] = dataMomentsArray16[dm1];
-               dataMoments16[mIndex++] = nextDataMomentsArray16[dm3];
-               dataMoments16[mIndex++] = nextDataMomentsArray16[dm4];
+               dataMoments16[mIndex++] = dm1;
+               dataMoments16[mIndex++] = dm2;
+               dataMoments16[mIndex++] = dm4;
+               dataMoments16[mIndex++] = dm1;
+               dataMoments16[mIndex++] = dm3;
+               dataMoments16[mIndex++] = dm4;
+
+               // cfpMoments is unused, so not populated here
             }
             else
             {
