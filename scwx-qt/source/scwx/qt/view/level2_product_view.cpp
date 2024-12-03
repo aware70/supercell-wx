@@ -707,7 +707,7 @@ void Level2ProductView::ComputeSweep()
          auto nextIt = std::next(it);
          if (nextIt == radarData->cend())
          {
-            continue;
+            nextIt = radarData->cbegin();
          }
 
          const auto& nextRadialPair = *(nextIt);
