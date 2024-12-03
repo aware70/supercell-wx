@@ -540,7 +540,7 @@ void Level2ProductView::ComputeSweep()
    // When there is missing data, insert another empty vertex radial at the end
    // to avoid stretching
    const bool isRadarDataIncomplete = Impl::IsRadarDataIncomplete(radarData);
-   if (isRadarDataIncomplete && !smoothingEnabled)
+   if (isRadarDataIncomplete)
    {
       ++vertexRadials;
    }
