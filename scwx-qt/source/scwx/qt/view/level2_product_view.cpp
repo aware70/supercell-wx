@@ -116,6 +116,7 @@ public:
 
    static bool IsRadarDataIncomplete(
       const std::shared_ptr<const wsr88d::rda::ElevationScan>& radarData);
+   static units::degrees<float> NormalizeAngle(units::degrees<float> angle);
 
    Level2ProductView* self_;
 
@@ -1042,10 +1043,9 @@ void Level2ProductView::Impl::ComputeCoordinates(
                const units::degrees<float> prevAngle =
                   prevRadial1->second->azimuth_angle();
 
-               // No wrapping required since angle is only used for geodesic
-               // calculation
+               // Calculate delta angle
                const units::degrees<float> deltaAngle =
-                  currentAngle - prevAngle;
+                  NormalizeAngle(currentAngle - prevAngle);
 
                // Delta scale is half the delta angle to reach the center of the
                // bin, because smoothing is enabled
@@ -1076,9 +1076,9 @@ void Level2ProductView::Impl::ComputeCoordinates(
                const units::degrees<float> prevAngle2 =
                   prevRadial2->second->azimuth_angle();
 
-               // No wrapping required since angle is only used for geodesic
-               // calculation
-               const units::degrees<float> deltaAngle = prevAngle1 - prevAngle2;
+               // Calculate delta angle
+               const units::degrees<float> deltaAngle =
+                  NormalizeAngle(prevAngle1 - prevAngle2);
 
                const float deltaScale =
                   (smoothingEnabled) ?
@@ -1160,6 +1160,25 @@ bool Level2ProductView::Impl::IsRadarDataIncomplete(
       common::GetAngleDelta(firstAngle, lastAngle);
 
    return angleDelta > kIncompleteDataAngleThreshold_;
+}
+
+units::degrees<float>
+Level2ProductView::Impl::NormalizeAngle(units::degrees<float> angle)
+{
+   constexpr auto angleLimit = units::degrees<float> {180.0f};
+   constexpr auto fullAngle  = units::degrees<float> {360.0f};
+
+   // Normalize angle to [-180, 180)
+   while (angle < -angleLimit)
+   {
+      angle += fullAngle;
+   }
+   while (angle >= angleLimit)
+   {
+      angle -= fullAngle;
+   }
+
+   return angle;
 }
 
 std::optional<std::uint16_t>
