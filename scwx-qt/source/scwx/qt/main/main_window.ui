@@ -153,8 +153,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>205</width>
-          <height>701</height>
+          <width>190</width>
+          <height>680</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_6">
@@ -328,6 +328,13 @@
             </item>
             <item>
              <widget class="QComboBox" name="mapStyleComboBox"/>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="smoothRadarDataCheckBox">
+              <property name="text">
+               <string>Smooth Radar Data</string>
+              </property>
+             </widget>
             </item>
             <item>
              <widget class="QCheckBox" name="trackLocationCheckBox">

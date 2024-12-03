@@ -225,7 +225,7 @@ public:
    std::shared_ptr<OverlayLayer>        overlayLayer_;
    std::shared_ptr<OverlayProductLayer> overlayProductLayer_ {nullptr};
    std::shared_ptr<PlacefileLayer>      placefileLayer_;
-   std::shared_ptr<MarkerLayer>            markerLayer_;
+   std::shared_ptr<MarkerLayer>         markerLayer_;
    std::shared_ptr<ColorTableLayer>     colorTableLayer_;
    std::shared_ptr<RadarSiteLayer>      radarSiteLayer_ {nullptr};
 
@@ -233,6 +233,7 @@ public:
 
    bool autoRefreshEnabled_;
    bool autoUpdateEnabled_;
+   bool smoothingEnabled_ {false};
 
    common::Level2Product selectedLevel2Product_;
 
@@ -727,6 +728,23 @@ std::uint16_t MapWidget::GetVcp() const
    }
 }
 
+bool MapWidget::GetSmoothingEnabled() const
+{
+   return p->smoothingEnabled_;
+}
+
+void MapWidget::SetSmoothingEnabled(bool smoothingEnabled)
+{
+   p->smoothingEnabled_ = smoothingEnabled;
+
+   auto radarProductView = p->context_->radar_product_view();
+   if (radarProductView != nullptr)
+   {
+      radarProductView->set_smoothing_enabled(smoothingEnabled);
+      radarProductView->Update();
+   }
+}
+
 void MapWidget::SelectElevation(float elevation)
 {
    auto radarProductView = p->context_->radar_product_view();
@@ -775,6 +793,7 @@ void MapWidget::SelectRadarProduct(common::RadarProductGroup group,
 
       radarProductView = view::RadarProductViewFactory::Create(
          group, productName, productCode, p->radarProductManager_);
+      radarProductView->set_smoothing_enabled(p->smoothingEnabled_);
       p->context_->set_radar_product_view(radarProductView);
 
       p->RadarProductViewConnect();

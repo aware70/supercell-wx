@@ -48,6 +48,7 @@ public:
    std::string                           GetRadarProductName() const;
    std::shared_ptr<config::RadarSite>    GetRadarSite() const;
    std::chrono::system_clock::time_point GetSelectedTime() const;
+   bool                                  GetSmoothingEnabled() const;
    std::uint16_t                         GetVcp() const;
 
    void SelectElevation(float elevation);
@@ -117,6 +118,7 @@ public:
                          double pitch);
    void SetInitialMapStyle(const std::string& styleName);
    void SetMapStyle(const std::string& styleName);
+   void SetSmoothingEnabled(bool enabled);
 
    /**
     * Updates the coordinates associated with mouse movement from another map.

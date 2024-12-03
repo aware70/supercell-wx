@@ -41,6 +41,7 @@ public:
    std::mutex sweepMutex_;
 
    std::chrono::system_clock::time_point selectedTime_;
+   bool                                  smoothingEnabled_ {false};
 
    std::shared_ptr<manager::RadarProductManager> radarProductManager_;
 };
@@ -87,6 +88,11 @@ std::chrono::system_clock::time_point RadarProductView::selected_time() const
    return p->selectedTime_;
 }
 
+bool RadarProductView::smoothing_enabled() const
+{
+   return p->smoothingEnabled_;
+}
+
 std::chrono::system_clock::time_point RadarProductView::sweep_time() const
 {
    return {};
@@ -103,6 +109,11 @@ void RadarProductView::set_radar_product_manager(
    DisconnectRadarProductManager();
    p->radarProductManager_ = radarProductManager;
    ConnectRadarProductManager();
+}
+
+void RadarProductView::set_smoothing_enabled(bool smoothingEnabled)
+{
+   p->smoothingEnabled_ = smoothingEnabled;
 }
 
 void RadarProductView::Initialize()

@@ -323,6 +323,8 @@ MainWindow::MainWindow(QWidget* parent) :
    p->mapSettingsGroup_->GetContentsLayout()->addWidget(ui->mapStyleLabel);
    p->mapSettingsGroup_->GetContentsLayout()->addWidget(ui->mapStyleComboBox);
    p->mapSettingsGroup_->GetContentsLayout()->addWidget(
+      ui->smoothRadarDataCheckBox);
+   p->mapSettingsGroup_->GetContentsLayout()->addWidget(
       ui->trackLocationCheckBox);
    ui->radarToolboxScrollAreaContents->layout()->replaceWidget(
       ui->mapSettingsGroupBox, p->mapSettingsGroup_);
@@ -1085,6 +1087,16 @@ void MainWindowImpl::ConnectOtherSignals()
                  }
               }
            });
+   connect(mainWindow_->ui->smoothRadarDataCheckBox,
+           &QCheckBox::checkStateChanged,
+           mainWindow_,
+           [this](Qt::CheckState state)
+           {
+              bool smoothingEnabled = (state == Qt::CheckState::Checked);
+
+              // Turn on smoothing
+              activeMap_->SetSmoothingEnabled(smoothingEnabled);
+           });
    connect(mainWindow_->ui->trackLocationCheckBox,
            &QCheckBox::checkStateChanged,
            mainWindow_,
@@ -1471,6 +1483,10 @@ void MainWindowImpl::UpdateRadarProductSettings()
    {
       level2SettingsGroup_->setVisible(false);
    }
+
+   mainWindow_->ui->smoothRadarDataCheckBox->setCheckState(
+      activeMap_->GetSmoothingEnabled() ? Qt::CheckState::Checked :
+                                          Qt::CheckState::Unchecked);
 }
 
 void MainWindowImpl::UpdateRadarSite()

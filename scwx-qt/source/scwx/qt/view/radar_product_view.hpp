@@ -49,10 +49,12 @@ public:
 
    std::shared_ptr<manager::RadarProductManager> radar_product_manager() const;
    std::chrono::system_clock::time_point         selected_time() const;
+   bool                                          smoothing_enabled() const;
    std::mutex&                                   sweep_mutex();
 
    void set_radar_product_manager(
       std::shared_ptr<manager::RadarProductManager> radarProductManager);
+   void set_smoothing_enabled(bool smoothingEnabled);
 
    void Initialize();
    virtual void

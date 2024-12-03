@@ -131,6 +131,8 @@ public:
    std::shared_ptr<wsr88d::rda::GenericRadarData::MomentDataBlock>
       momentDataBlock0_;
 
+   bool prevSmoothingEnabled_ {false};
+
    std::vector<float>    coordinates_ {};
    std::vector<float>    vertices_ {};
    std::vector<uint8_t>  dataMoments8_ {};
@@ -512,6 +514,7 @@ void Level2ProductView::ComputeSweep()
 
    std::shared_ptr<manager::RadarProductManager> radarProductManager =
       radar_product_manager();
+   const bool smoothingEnabled = smoothing_enabled();
 
    std::shared_ptr<wsr88d::rda::ElevationScan> radarData;
    std::chrono::system_clock::time_point       requestedTime {selected_time()};
@@ -524,14 +527,14 @@ void Level2ProductView::ComputeSweep()
       Q_EMIT SweepNotComputed(types::NoUpdateReason::NotLoaded);
       return;
    }
-   if (radarData == p->elevationScan_)
+   if (radarData == p->elevationScan_ &&
+       smoothingEnabled == p->prevSmoothingEnabled_)
    {
       Q_EMIT SweepNotComputed(types::NoUpdateReason::NoChange);
       return;
    }
 
-   // TODO: Where does this come from?
-   bool smoothingEnabled = false;
+   p->prevSmoothingEnabled_ = smoothingEnabled;
 
    logger_->debug("Computing Sweep");
 
