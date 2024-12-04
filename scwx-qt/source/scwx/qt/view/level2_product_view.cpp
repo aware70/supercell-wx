@@ -809,6 +809,8 @@ void Level2ProductView::ComputeSweep()
             {
                // If smoothing is enabled, gate should never start at zero
                // (radar site origin)
+               logger_->error(
+                  "Smoothing enabled, gate should not start at zero");
                continue;
             }
          }
