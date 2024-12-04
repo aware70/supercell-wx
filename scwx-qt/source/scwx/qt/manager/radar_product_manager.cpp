@@ -28,6 +28,7 @@
 #include <boost/timer/timer.hpp>
 #include <fmt/chrono.h>
 #include <qmaplibre.hpp>
+#include <units/angle.h>
 
 #if defined(_MSC_VER)
 #   pragma warning(pop)
@@ -206,6 +207,13 @@ public:
 
    void UpdateAvailableProductsSync();
 
+   void
+   CalculateCoordinates(const boost::integer_range<std::uint32_t>& radialGates,
+                        const units::angle::degrees<float>         radialAngle,
+                        const units::angle::degrees<float>         angleOffset,
+                        const float         gateRangeOffset,
+                        std::vector<float>& outputCoordinates);
+
    static void
    PopulateProductTimes(std::shared_ptr<ProviderManager> providerManager,
                         RadarProductRecordMap&           productRecordMap,
@@ -226,10 +234,12 @@ public:
    std::size_t                        cacheLimit_ {6u};
 
    std::vector<float> coordinates0_5Degree_ {};
+   std::vector<float> coordinates0_5DegreeSmooth_ {};
    std::vector<float> coordinates1Degree_ {};
+   std::vector<float> coordinates1DegreeSmooth_ {};
 
-   RadarProductRecordMap   level2ProductRecords_ {};
-   RadarProductRecordList  level2ProductRecentRecords_ {};
+   RadarProductRecordMap  level2ProductRecords_ {};
+   RadarProductRecordList level2ProductRecentRecords_ {};
    std::unordered_map<std::string, RadarProductRecordMap>
       level3ProductRecordsMap_ {};
    std::unordered_map<std::string, RadarProductRecordList>
@@ -361,14 +371,29 @@ void RadarProductManager::DumpRecords()
 }
 
 const std::vector<float>&
-RadarProductManager::coordinates(common::RadialSize radialSize) const
+RadarProductManager::coordinates(common::RadialSize radialSize,
+                                 bool               smoothingEnabled) const
 {
    switch (radialSize)
    {
    case common::RadialSize::_0_5Degree:
-      return p->coordinates0_5Degree_;
+      if (smoothingEnabled)
+      {
+         return p->coordinates0_5DegreeSmooth_;
+      }
+      else
+      {
+         return p->coordinates0_5Degree_;
+      }
    case common::RadialSize::_1Degree:
-      return p->coordinates1Degree_;
+      if (smoothingEnabled)
+      {
+         return p->coordinates1DegreeSmooth_;
+      }
+      else
+      {
+         return p->coordinates1Degree_;
+      }
    default:
       throw std::invalid_argument("Invalid radial size");
    }
@@ -430,49 +455,44 @@ void RadarProductManager::Initialize()
 
    boost::timer::cpu_timer timer;
 
-   const GeographicLib::Geodesic& geodesic(
-      util::GeographicLib::DefaultGeodesic());
-
-   const QMapLibre::Coordinate radar(p->radarSite_->latitude(),
-                                     p->radarSite_->longitude());
-
-   const float gateSize = gate_size();
-
    // Calculate half degree azimuth coordinates
    timer.start();
    std::vector<float>& coordinates0_5Degree = p->coordinates0_5Degree_;
 
    coordinates0_5Degree.resize(NUM_COORIDNATES_0_5_DEGREE);
 
-   auto radialGates0_5Degree =
+   const auto radialGates0_5Degree =
       boost::irange<uint32_t>(0, NUM_RADIAL_GATES_0_5_DEGREE);
 
-   std::for_each(
-      std::execution::par_unseq,
-      radialGates0_5Degree.begin(),
-      radialGates0_5Degree.end(),
-      [&](uint32_t radialGate)
-      {
-         const uint16_t gate =
-            static_cast<uint16_t>(radialGate % common::MAX_DATA_MOMENT_GATES);
-         const uint16_t radial =
-            static_cast<uint16_t>(radialGate / common::MAX_DATA_MOMENT_GATES);
+   p->CalculateCoordinates(
+      radialGates0_5Degree,
+      units::angle::degrees<float> {0.5f}, // Radial angle
+      units::angle::degrees<float> {0.0f}, // Angle offset
+      // Far end of the first gate is the gate size distance from the radar site
+      1.0f,
+      coordinates0_5Degree);
 
-         const float  angle  = radial * 0.5f; // 0.5 degree radial
-         const float  range  = (gate + 1) * gateSize;
-         const size_t offset = radialGate * 2;
-
-         double latitude;
-         double longitude;
-
-         geodesic.Direct(
-            radar.first, radar.second, angle, range, latitude, longitude);
-
-         coordinates0_5Degree[offset]     = latitude;
-         coordinates0_5Degree[offset + 1] = longitude;
-      });
    timer.stop();
    logger_->debug("Coordinates (0.5 degree) calculated in {}",
+                  timer.format(6, "%ws"));
+
+   // Calculate half degree smooth azimuth coordinates
+   timer.start();
+   std::vector<float>& coordinates0_5DegreeSmooth =
+      p->coordinates0_5DegreeSmooth_;
+
+   coordinates0_5DegreeSmooth.resize(NUM_COORIDNATES_0_5_DEGREE);
+
+   p->CalculateCoordinates(radialGates0_5Degree,
+                           units::angle::degrees<float> {0.5f},  // Radial angle
+                           units::angle::degrees<float> {0.25f}, // Angle offset
+                           // Center of the first gate is half the gate size
+                           // distance from the radar site
+                           0.5f,
+                           coordinates0_5DegreeSmooth);
+
+   timer.stop();
+   logger_->debug("Coordinates (0.5 degree smooth) calculated in {}",
                   timer.format(6, "%ws"));
 
    // Calculate 1 degree azimuth coordinates
@@ -481,13 +501,61 @@ void RadarProductManager::Initialize()
 
    coordinates1Degree.resize(NUM_COORIDNATES_1_DEGREE);
 
-   auto radialGates1Degree =
+   const auto radialGates1Degree =
       boost::irange<uint32_t>(0, NUM_RADIAL_GATES_1_DEGREE);
+
+   p->CalculateCoordinates(
+      radialGates1Degree,
+      units::angle::degrees<float> {1.0f}, // Radial angle
+      units::angle::degrees<float> {0.0f}, // Angle offset
+      // Far end of the first gate is the gate size distance from the radar site
+      1.0f,
+      coordinates1Degree);
+
+   timer.stop();
+   logger_->debug("Coordinates (1 degree) calculated in {}",
+                  timer.format(6, "%ws"));
+
+   // Calculate 1 degree smooth azimuth coordinates
+   timer.start();
+   std::vector<float>& coordinates1DegreeSmooth = p->coordinates1DegreeSmooth_;
+
+   coordinates1DegreeSmooth.resize(NUM_COORIDNATES_1_DEGREE);
+
+   p->CalculateCoordinates(radialGates1Degree,
+                           units::angle::degrees<float> {1.0f}, // Radial angle
+                           units::angle::degrees<float> {0.5f}, // Angle offset
+                           // Center of the first gate is twice the gate size
+                           // distance from the radar site
+                           2.0f,
+                           coordinates1DegreeSmooth);
+
+   timer.stop();
+   logger_->debug("Coordinates (1 degree smooth) calculated in {}",
+                  timer.format(6, "%ws"));
+
+   p->initialized_ = true;
+}
+
+void RadarProductManagerImpl::CalculateCoordinates(
+   const boost::integer_range<std::uint32_t>& radialGates,
+   const units::angle::degrees<float>         radialAngle,
+   const units::angle::degrees<float>         angleOffset,
+   const float                                gateRangeOffset,
+   std::vector<float>&                        outputCoordinates)
+{
+   const GeographicLib::Geodesic& geodesic(
+      util::GeographicLib::DefaultGeodesic());
+
+   const QMapLibre::Coordinate radar(radarSite_->latitude(),
+                                     radarSite_->longitude());
+
+   const float gateSize = self_->gate_size();
 
    std::for_each(
       std::execution::par_unseq,
-      radialGates1Degree.begin(),
-      radialGates1Degree.end(),
+      radialGates.begin(),
+      radialGates.end(),
       [&](uint32_t radialGate)
       {
          const uint16_t gate =
@@ -495,8 +563,8 @@ void RadarProductManager::Initialize()
          const uint16_t radial =
             static_cast<uint16_t>(radialGate / common::MAX_DATA_MOMENT_GATES);
 
-         const float  angle  = radial * 1.0f; // 1 degree radial
-         const float  range  = (gate + 1) * gateSize;
+         const float angle = radial * radialAngle.value() + angleOffset.value();
+         const float range = (gate + gateRangeOffset) * gateSize;
          const size_t offset = radialGate * 2;
 
          double latitude;
@@ -505,14 +573,9 @@ void RadarProductManager::Initialize()
          geodesic.Direct(
             radar.first, radar.second, angle, range, latitude, longitude);
 
-         coordinates1Degree[offset]     = latitude;
-         coordinates1Degree[offset + 1] = longitude;
+         outputCoordinates[offset]     = latitude;
+         outputCoordinates[offset + 1] = longitude;
       });
-   timer.stop();
-   logger_->debug("Coordinates (1 degree) calculated in {}",
-                  timer.format(6, "%ws"));
-
-   p->initialized_ = true;
 }
 
 std::shared_ptr<ProviderManager>

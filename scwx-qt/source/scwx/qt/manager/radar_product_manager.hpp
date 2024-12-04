@@ -41,7 +41,8 @@ public:
     */
    static void DumpRecords();
 
-   const std::vector<float>& coordinates(common::RadialSize radialSize) const;
+   const std::vector<float>&          coordinates(common::RadialSize radialSize,
+                                                  bool smoothingEnabled) const;
    const scwx::util::time_zone*       default_time_zone() const;
    float                              gate_size() const;
    std::string                        radar_id() const;
