@@ -135,9 +135,9 @@
               <property name="geometry">
                <rect>
                 <x>0</x>
-                <y>-133</y>
+                <y>-246</y>
                 <width>511</width>
-                <height>676</height>
+                <height>703</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout">
@@ -587,6 +587,19 @@
                 <widget class="QCheckBox" name="enableUpdateNotificationsCheckBox">
                  <property name="text">
                   <string>Update Notifications Enabled</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="cursorIconAlwaysOnCheckBox">
+                 <property name="acceptDrops">
+                  <bool>false</bool>
+                 </property>
+                 <property name="toolTip">
+                  <string/>
+                 </property>
+                 <property name="text">
+                  <string>Multi-Pane Cursor Marker Always On</string>
                  </property>
                 </widget>
                </item>

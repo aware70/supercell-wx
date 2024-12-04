@@ -53,6 +53,7 @@ public:
    SettingsVariable<bool>&                       track_location() const;
    SettingsVariable<bool>&        update_notifications_enabled() const;
    SettingsVariable<std::string>& warnings_provider() const;
+   SettingsVariable<bool>&        cursor_icon_always_on() const;
 
    static GeneralSettings& Instance();
 

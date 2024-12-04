@@ -137,6 +137,7 @@ public:
           &showMapCenter_,
           &showMapLogo_,
           &updateNotificationsEnabled_,
+          &cursorIconAlwaysOn_,
           &debugEnabled_,
           &alertAudioSoundFile_,
           &alertAudioLocationMethod_,
@@ -251,6 +252,7 @@ public:
    settings::SettingsInterface<bool>         showMapCenter_ {};
    settings::SettingsInterface<bool>         showMapLogo_ {};
    settings::SettingsInterface<bool>         updateNotificationsEnabled_ {};
+   settings::SettingsInterface<bool>         cursorIconAlwaysOn_ {};
    settings::SettingsInterface<bool>         debugEnabled_ {};
 
    std::unordered_map<std::string, settings::SettingsInterface<std::string>>
@@ -761,6 +763,10 @@ void SettingsDialogImpl::SetupGeneralTab()
       generalSettings.update_notifications_enabled());
    updateNotificationsEnabled_.SetEditWidget(
       self_->ui->enableUpdateNotificationsCheckBox);
+
+   cursorIconAlwaysOn_.SetSettingsVariable(
+      generalSettings.cursor_icon_always_on());
+   cursorIconAlwaysOn_.SetEditWidget(self_->ui->cursorIconAlwaysOnCheckBox);
 
    debugEnabled_.SetSettingsVariable(generalSettings.debug_enabled());
    debugEnabled_.SetEditWidget(self_->ui->debugEnabledCheckBox);

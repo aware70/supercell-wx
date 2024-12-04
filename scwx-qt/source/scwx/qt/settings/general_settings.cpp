@@ -77,6 +77,7 @@ public:
       trackLocation_.SetDefault(false);
       updateNotificationsEnabled_.SetDefault(true);
       warningsProvider_.SetDefault(defaultWarningsProviderValue);
+      cursorIconAlwaysOn_.SetDefault(false);
 
       fontSizes_.SetElementMinimum(1);
       fontSizes_.SetElementMaximum(72);
@@ -166,6 +167,7 @@ public:
    SettingsVariable<bool>         trackLocation_ {"track_location"};
    SettingsVariable<bool> updateNotificationsEnabled_ {"update_notifications"};
    SettingsVariable<std::string> warningsProvider_ {"warnings_provider"};
+   SettingsVariable<bool>        cursorIconAlwaysOn_ {"cursor_icon_always_on"};
 };
 
 GeneralSettings::GeneralSettings() :
@@ -198,7 +200,8 @@ GeneralSettings::GeneralSettings() :
                       &p->themeFile_,
                       &p->trackLocation_,
                       &p->updateNotificationsEnabled_,
-                      &p->warningsProvider_});
+                      &p->warningsProvider_,
+                      &p->cursorIconAlwaysOn_});
    SetDefaults();
 }
 GeneralSettings::~GeneralSettings() = default;
@@ -348,6 +351,11 @@ SettingsVariable<std::string>& GeneralSettings::warnings_provider() const
    return p->warningsProvider_;
 }
 
+SettingsVariable<bool>& GeneralSettings::cursor_icon_always_on() const
+{
+   return p->cursorIconAlwaysOn_;
+}
+
 bool GeneralSettings::Shutdown()
 {
    bool dataChanged = false;
@@ -397,7 +405,8 @@ bool operator==(const GeneralSettings& lhs, const GeneralSettings& rhs)
            lhs.p->trackLocation_ == rhs.p->trackLocation_ &&
            lhs.p->updateNotificationsEnabled_ ==
               rhs.p->updateNotificationsEnabled_ &&
-           lhs.p->warningsProvider_ == rhs.p->warningsProvider_);
+           lhs.p->warningsProvider_ == rhs.p->warningsProvider_ &&
+           lhs.p->cursorIconAlwaysOn_ == rhs.p->cursorIconAlwaysOn_);
 }
 
 } // namespace settings

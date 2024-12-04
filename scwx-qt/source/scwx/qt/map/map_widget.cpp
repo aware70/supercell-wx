@@ -1039,11 +1039,14 @@ void MapWidget::UpdateMouseCoordinate(const common::Coordinate& coordinate)
 {
    if (p->context_->mouse_coordinate() != coordinate)
    {
+      auto& generalSettings = settings::GeneralSettings::Instance();
+
       p->context_->set_mouse_coordinate(coordinate);
 
       auto keyboardModifiers = QGuiApplication::keyboardModifiers();
 
-      if (keyboardModifiers != Qt::KeyboardModifier::NoModifier ||
+      if (generalSettings.cursor_icon_always_on().GetValue() ||
+          keyboardModifiers != Qt::KeyboardModifier::NoModifier ||
           keyboardModifiers != p->lastKeyboardModifiers_)
       {
          QMetaObject::invokeMethod(
