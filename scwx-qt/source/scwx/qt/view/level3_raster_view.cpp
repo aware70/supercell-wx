@@ -310,10 +310,12 @@ void Level3RasterView::ComputeSweep()
                                    rasterData->number_of_rows() - 1 :
                                    rasterData->number_of_rows();
 
-   for (size_t row = 0; row < rowCount; ++row)
+   for (std::size_t row = 0; row < rowCount; ++row)
    {
       const std::size_t nextRow =
-         (row == rasterData->number_of_rows() - 1) ? 0 : row + 1;
+         (row == static_cast<std::size_t>(rasterData->number_of_rows() - 1)) ?
+            0 :
+            row + 1;
 
       const auto& dataMomentsArray8 =
          rasterData->level(static_cast<uint16_t>(row));
