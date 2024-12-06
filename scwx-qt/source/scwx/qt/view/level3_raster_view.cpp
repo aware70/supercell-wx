@@ -39,6 +39,7 @@ public:
    std::vector<uint8_t> dataMoments8_;
 
    std::shared_ptr<wsr88d::rpg::RasterDataPacket> lastRasterData_ {};
+   bool                                           lastSmoothingEnabled_ {false};
 
    float    latitude_;
    float    longitude_;
@@ -109,6 +110,7 @@ void Level3RasterView::ComputeSweep()
 
    std::shared_ptr<manager::RadarProductManager> radarProductManager =
       radar_product_manager();
+   const bool smoothingEnabled = smoothing_enabled();
 
    // Retrieve message from Radar Product Manager
    std::shared_ptr<wsr88d::rpg::Level3Message> message;
@@ -139,13 +141,16 @@ void Level3RasterView::ComputeSweep()
       Q_EMIT SweepNotComputed(types::NoUpdateReason::InvalidData);
       return;
    }
-   else if (gpm == graphic_product_message())
+   else if (gpm == graphic_product_message() &&
+            smoothingEnabled == p->lastSmoothingEnabled_)
    {
       // Skip if this is the message we previously processed
       Q_EMIT SweepNotComputed(types::NoUpdateReason::NoChange);
       return;
    }
    set_graphic_product_message(gpm);
+
+   p->lastSmoothingEnabled_ = smoothingEnabled;
 
    // A message with radial data should have a Product Description Block and
    // Product Symbology Block
@@ -231,16 +236,18 @@ void Level3RasterView::ComputeSweep()
    const GeographicLib::Geodesic& geodesic =
       util::GeographicLib::DefaultGeodesic();
 
-   const uint16_t xResolution = descriptionBlock->x_resolution_raw();
-   const uint16_t yResolution = descriptionBlock->y_resolution_raw();
-   double         iCoordinate =
+   const std::uint16_t xResolution = descriptionBlock->x_resolution_raw();
+   const std::uint16_t yResolution = descriptionBlock->y_resolution_raw();
+   const double        iCoordinate =
       (-rasterData->i_coordinate_start() - 1.0 - p->range_) * 1000.0;
-   double jCoordinate =
+   const double jCoordinate =
       (rasterData->j_coordinate_start() + 1.0 + p->range_) * 1000.0;
+   const double xOffset = (smoothingEnabled) ? xResolution * 0.5 : 0.0;
+   const double yOffset = (smoothingEnabled) ? yResolution * 0.5 : 0.0;
 
-   size_t numCoordinates =
+   const std::size_t numCoordinates =
       static_cast<size_t>(rows + 1) * static_cast<size_t>(maxColumns + 1);
-   auto coordinateRange =
+   const auto coordinateRange =
       boost::irange<uint32_t>(0, static_cast<uint32_t>(numCoordinates));
 
    std::vector<float> coordinates;
@@ -260,8 +267,8 @@ void Level3RasterView::ComputeSweep()
          const uint32_t col = index % (rows + 1);
          const uint32_t row = index / (rows + 1);
 
-         const double i = iCoordinate + xResolution * col;
-         const double j = jCoordinate - yResolution * row;
+         const double i = iCoordinate + xResolution * col + xOffset;
+         const double j = jCoordinate - yResolution * row - yOffset;
 
          // Calculate polar coordinates based on i and j
          const double angle  = std::atan2(i, j) * 180.0 / M_PI;
@@ -299,25 +306,68 @@ void Level3RasterView::ComputeSweep()
    // Compute threshold at which to display an individual bin
    const uint16_t snrThreshold = descriptionBlock->threshold();
 
-   for (size_t row = 0; row < rasterData->number_of_rows(); ++row)
+   const std::size_t rowCount = (smoothingEnabled) ?
+                                   rasterData->number_of_rows() - 1 :
+                                   rasterData->number_of_rows();
+
+   for (size_t row = 0; row < rowCount; ++row)
    {
-      const auto dataMomentsArray8 =
+      const std::size_t nextRow =
+         (row == rasterData->number_of_rows() - 1) ? 0 : row + 1;
+
+      const auto& dataMomentsArray8 =
          rasterData->level(static_cast<uint16_t>(row));
+      const auto& nextDataMomentsArray8 =
+         rasterData->level(static_cast<uint16_t>(nextRow));
 
       for (size_t bin = 0; bin < dataMomentsArray8.size(); ++bin)
       {
-         constexpr size_t vertexCount = 6;
-
-         // Store data moment value
-         uint8_t dataValue = dataMomentsArray8[bin];
-         if (dataValue < snrThreshold && dataValue != RANGE_FOLDED)
+         if (!smoothingEnabled)
          {
-            continue;
+            constexpr size_t vertexCount = 6;
+
+            // Store data moment value
+            uint8_t dataValue = dataMomentsArray8[bin];
+            if (dataValue < snrThreshold && dataValue != RANGE_FOLDED)
+            {
+               continue;
+            }
+
+            for (size_t m = 0; m < vertexCount; m++)
+            {
+               dataMoments8[mIndex++] = dataValue;
+            }
          }
-
-         for (size_t m = 0; m < vertexCount; m++)
+         else
          {
-            dataMoments8[mIndex++] = dataValue;
+            // Validate indices are all in range
+            if (bin + 1 >= dataMomentsArray8.size() ||
+                bin + 1 >= nextDataMomentsArray8.size())
+            {
+               continue;
+            }
+
+            const std::uint8_t& dm1 = dataMomentsArray8[bin];
+            const std::uint8_t& dm2 = dataMomentsArray8[bin + 1];
+            const std::uint8_t& dm3 = nextDataMomentsArray8[bin];
+            const std::uint8_t& dm4 = nextDataMomentsArray8[bin + 1];
+
+            if (dm1 < snrThreshold && dm1 != RANGE_FOLDED &&
+                dm2 < snrThreshold && dm2 != RANGE_FOLDED &&
+                dm3 < snrThreshold && dm3 != RANGE_FOLDED &&
+                dm4 < snrThreshold && dm4 != RANGE_FOLDED)
+            {
+               // Skip only if all data moments are hidden
+               continue;
+            }
+
+            // The order must match the store vertices section below
+            dataMoments8[mIndex++] = dm1;
+            dataMoments8[mIndex++] = dm2;
+            dataMoments8[mIndex++] = dm4;
+            dataMoments8[mIndex++] = dm1;
+            dataMoments8[mIndex++] = dm3;
+            dataMoments8[mIndex++] = dm4;
          }
 
          // Store vertices
@@ -332,17 +382,17 @@ void Level3RasterView::ComputeSweep()
          vertices[vIndex++] = coordinates[offset2];
          vertices[vIndex++] = coordinates[offset2 + 1];
 
-         vertices[vIndex++] = coordinates[offset3];
-         vertices[vIndex++] = coordinates[offset3 + 1];
+         vertices[vIndex++] = coordinates[offset4];
+         vertices[vIndex++] = coordinates[offset4 + 1];
+
+         vertices[vIndex++] = coordinates[offset1];
+         vertices[vIndex++] = coordinates[offset1 + 1];
 
          vertices[vIndex++] = coordinates[offset3];
          vertices[vIndex++] = coordinates[offset3 + 1];
 
          vertices[vIndex++] = coordinates[offset4];
          vertices[vIndex++] = coordinates[offset4 + 1];
-
-         vertices[vIndex++] = coordinates[offset2];
-         vertices[vIndex++] = coordinates[offset2 + 1];
       }
    }
    vertices.resize(vIndex);

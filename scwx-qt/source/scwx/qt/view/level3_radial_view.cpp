@@ -56,8 +56,7 @@ public:
    std::vector<std::uint8_t> dataMoments8_ {};
 
    std::shared_ptr<wsr88d::rpg::GenericRadialDataPacket> lastRadialData_ {};
-
-   bool prevSmoothingEnabled_ {false};
+   bool lastSmoothingEnabled_ {false};
 
    float         latitude_;
    float         longitude_;
@@ -160,7 +159,7 @@ void Level3RadialView::ComputeSweep()
       return;
    }
    else if (gpm == graphic_product_message() &&
-            smoothingEnabled == p->prevSmoothingEnabled_)
+            smoothingEnabled == p->lastSmoothingEnabled_)
    {
       // Skip if this is the message we previously processed
       Q_EMIT SweepNotComputed(types::NoUpdateReason::NoChange);
@@ -168,7 +167,7 @@ void Level3RadialView::ComputeSweep()
    }
    set_graphic_product_message(gpm);
 
-   p->prevSmoothingEnabled_ = smoothingEnabled;
+   p->lastSmoothingEnabled_ = smoothingEnabled;
 
    // A message with radial data should have a Product Description Block and
    // Product Symbology Block

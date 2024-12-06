@@ -131,7 +131,7 @@ public:
    std::shared_ptr<wsr88d::rda::GenericRadarData::MomentDataBlock>
       momentDataBlock0_;
 
-   bool prevSmoothingEnabled_ {false};
+   bool lastSmoothingEnabled_ {false};
 
    std::vector<float>    coordinates_ {};
    std::vector<float>    vertices_ {};
@@ -528,13 +528,13 @@ void Level2ProductView::ComputeSweep()
       return;
    }
    if (radarData == p->elevationScan_ &&
-       smoothingEnabled == p->prevSmoothingEnabled_)
+       smoothingEnabled == p->lastSmoothingEnabled_)
    {
       Q_EMIT SweepNotComputed(types::NoUpdateReason::NoChange);
       return;
    }
 
-   p->prevSmoothingEnabled_ = smoothingEnabled;
+   p->lastSmoothingEnabled_ = smoothingEnabled;
 
    logger_->debug("Computing Sweep");
 
