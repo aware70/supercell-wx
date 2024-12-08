@@ -114,6 +114,10 @@ public:
    void UpdateOtherUnits(const std::string& name);
    void UpdateSpeedUnits(const std::string& name);
 
+   void ComputeEdgeValue();
+   template<typename T>
+   inline T RemapDataMoment(T dataMoment) const;
+
    static bool IsRadarDataIncomplete(
       const std::shared_ptr<const wsr88d::rda::ElevationScan>& radarData);
    static units::degrees<float> NormalizeAngle(units::degrees<float> angle);
@@ -138,6 +142,7 @@ public:
    std::vector<uint8_t>  dataMoments8_ {};
    std::vector<uint16_t> dataMoments16_ {};
    std::vector<uint8_t>  cfpMoments_ {};
+   std::uint16_t         edgeValue_ {};
 
    float                    latitude_;
    float                    longitude_;
@@ -633,6 +638,13 @@ void Level2ProductView::ComputeSweep()
    // Start radial is always 0, as coordinates are calculated for each sweep
    constexpr std::uint16_t startRadial = 0u;
 
+   // For most products other than reflectivity, the edge should not go to the
+   // bottom of the color table
+   if (smoothingEnabled)
+   {
+      p->ComputeEdgeValue();
+   }
+
    for (auto it = radarData->cbegin(); it != radarData->cend(); ++it)
    {
       const auto&   radialPair = *it;
@@ -796,12 +808,12 @@ void Level2ProductView::ComputeSweep()
                }
 
                // The order must match the store vertices section below
-               dataMoments8[mIndex++] = dm1;
-               dataMoments8[mIndex++] = dm2;
-               dataMoments8[mIndex++] = dm4;
-               dataMoments8[mIndex++] = dm1;
-               dataMoments8[mIndex++] = dm3;
-               dataMoments8[mIndex++] = dm4;
+               dataMoments8[mIndex++] = p->RemapDataMoment(dm1);
+               dataMoments8[mIndex++] = p->RemapDataMoment(dm2);
+               dataMoments8[mIndex++] = p->RemapDataMoment(dm4);
+               dataMoments8[mIndex++] = p->RemapDataMoment(dm1);
+               dataMoments8[mIndex++] = p->RemapDataMoment(dm3);
+               dataMoments8[mIndex++] = p->RemapDataMoment(dm4);
 
                // cfpMoments is unused, so not populated here
             }
@@ -853,12 +865,12 @@ void Level2ProductView::ComputeSweep()
                }
 
                // The order must match the store vertices section below
-               dataMoments16[mIndex++] = dm1;
-               dataMoments16[mIndex++] = dm2;
-               dataMoments16[mIndex++] = dm4;
-               dataMoments16[mIndex++] = dm1;
-               dataMoments16[mIndex++] = dm3;
-               dataMoments16[mIndex++] = dm4;
+               dataMoments16[mIndex++] = p->RemapDataMoment(dm1);
+               dataMoments16[mIndex++] = p->RemapDataMoment(dm2);
+               dataMoments16[mIndex++] = p->RemapDataMoment(dm4);
+               dataMoments16[mIndex++] = p->RemapDataMoment(dm1);
+               dataMoments16[mIndex++] = p->RemapDataMoment(dm3);
+               dataMoments16[mIndex++] = p->RemapDataMoment(dm4);
 
                // cfpMoments is unused, so not populated here
             }
@@ -968,6 +980,46 @@ void Level2ProductView::ComputeSweep()
    UpdateColorTableLut();
 
    Q_EMIT SweepComputed();
+}
+
+void Level2ProductView::Impl::ComputeEdgeValue()
+{
+   const float offset = momentDataBlock0_->offset();
+
+   switch (dataBlockType_)
+   {
+   case wsr88d::rda::DataBlockType::MomentVel:
+   case wsr88d::rda::DataBlockType::MomentZdr:
+      edgeValue_ = offset;
+      break;
+
+   case wsr88d::rda::DataBlockType::MomentSw:
+   case wsr88d::rda::DataBlockType::MomentPhi:
+      edgeValue_ = 2;
+      break;
+
+   case wsr88d::rda::DataBlockType::MomentRho:
+      edgeValue_ = 255;
+      break;
+
+   case wsr88d::rda::DataBlockType::MomentRef:
+   default:
+      edgeValue_ = 0;
+      break;
+   }
+}
+
+template<typename T>
+T Level2ProductView::Impl::RemapDataMoment(T dataMoment) const
+{
+   if (dataMoment != 0)
+   {
+      return dataMoment;
+   }
+   else
+   {
+      return edgeValue_;
+   }
 }
 
 void Level2ProductView::Impl::ComputeCoordinates(
