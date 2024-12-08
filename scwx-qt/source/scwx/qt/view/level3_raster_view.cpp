@@ -33,10 +33,13 @@ public:
    }
    ~Level3RasterViewImpl() { threadPool_.join(); };
 
+   inline std::uint8_t RemapDataMoment(std::uint8_t dataMoment) const;
+
    boost::asio::thread_pool threadPool_ {1u};
 
-   std::vector<float>   vertices_;
-   std::vector<uint8_t> dataMoments8_;
+   std::vector<float>        vertices_ {};
+   std::vector<std::uint8_t> dataMoments8_ {};
+   std::uint8_t              edgeValue_ {};
 
    std::shared_ptr<wsr88d::rpg::RasterDataPacket> lastRasterData_ {};
    bool                                           lastSmoothingEnabled_ {false};
@@ -310,6 +313,13 @@ void Level3RasterView::ComputeSweep()
                                    rasterData->number_of_rows() - 1 :
                                    rasterData->number_of_rows();
 
+   if (smoothingEnabled)
+   {
+      // For most products other than reflectivity, the edge should not go to
+      // the bottom of the color table
+      p->edgeValue_ = ComputeEdgeValue();
+   }
+
    for (std::size_t row = 0; row < rowCount; ++row)
    {
       const std::size_t nextRow =
@@ -364,12 +374,12 @@ void Level3RasterView::ComputeSweep()
             }
 
             // The order must match the store vertices section below
-            dataMoments8[mIndex++] = dm1;
-            dataMoments8[mIndex++] = dm2;
-            dataMoments8[mIndex++] = dm4;
-            dataMoments8[mIndex++] = dm1;
-            dataMoments8[mIndex++] = dm3;
-            dataMoments8[mIndex++] = dm4;
+            dataMoments8[mIndex++] = p->RemapDataMoment(dm1);
+            dataMoments8[mIndex++] = p->RemapDataMoment(dm2);
+            dataMoments8[mIndex++] = p->RemapDataMoment(dm4);
+            dataMoments8[mIndex++] = p->RemapDataMoment(dm1);
+            dataMoments8[mIndex++] = p->RemapDataMoment(dm3);
+            dataMoments8[mIndex++] = p->RemapDataMoment(dm4);
          }
 
          // Store vertices
@@ -409,6 +419,19 @@ void Level3RasterView::ComputeSweep()
    UpdateColorTableLut();
 
    Q_EMIT SweepComputed();
+}
+
+std::uint8_t
+Level3RasterViewImpl::RemapDataMoment(std::uint8_t dataMoment) const
+{
+   if (dataMoment != 0)
+   {
+      return dataMoment;
+   }
+   else
+   {
+      return edgeValue_;
+   }
 }
 
 std::optional<std::uint16_t>

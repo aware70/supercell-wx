@@ -47,6 +47,8 @@ public:
       const std::shared_ptr<wsr88d::rpg::GenericRadialDataPacket>& radialData,
       bool smoothingEnabled);
 
+   inline std::uint8_t RemapDataMoment(std::uint8_t dataMoment) const;
+
    Level3RadialView* self_;
 
    boost::asio::thread_pool threadPool_ {1u};
@@ -54,6 +56,7 @@ public:
    std::vector<float>        coordinates_ {};
    std::vector<float>        vertices_ {};
    std::vector<std::uint8_t> dataMoments8_ {};
+   std::uint8_t              edgeValue_ {};
 
    std::shared_ptr<wsr88d::rpg::GenericRadialDataPacket> lastRadialData_ {};
    bool lastSmoothingEnabled_ {false};
@@ -347,6 +350,10 @@ void Level3RadialView::ComputeSweep()
       // are skipping the radar site origin. The end gate is unaffected, as
       // we need to draw one less data point.
       ++startGate;
+
+      // For most products other than reflectivity, the edge should not go to
+      // the bottom of the color table
+      p->edgeValue_ = ComputeEdgeValue();
    }
 
    for (std::uint16_t radial = 0; radial < radialData->number_of_radials();
@@ -401,12 +408,12 @@ void Level3RadialView::ComputeSweep()
             }
 
             // The order must match the store vertices section below
-            dataMoments8[mIndex++] = dm1;
-            dataMoments8[mIndex++] = dm2;
-            dataMoments8[mIndex++] = dm4;
-            dataMoments8[mIndex++] = dm1;
-            dataMoments8[mIndex++] = dm3;
-            dataMoments8[mIndex++] = dm4;
+            dataMoments8[mIndex++] = p->RemapDataMoment(dm1);
+            dataMoments8[mIndex++] = p->RemapDataMoment(dm2);
+            dataMoments8[mIndex++] = p->RemapDataMoment(dm4);
+            dataMoments8[mIndex++] = p->RemapDataMoment(dm1);
+            dataMoments8[mIndex++] = p->RemapDataMoment(dm3);
+            dataMoments8[mIndex++] = p->RemapDataMoment(dm4);
          }
          else
          {
@@ -490,6 +497,19 @@ void Level3RadialView::ComputeSweep()
    UpdateColorTableLut();
 
    Q_EMIT SweepComputed();
+}
+
+std::uint8_t
+Level3RadialView::Impl::RemapDataMoment(std::uint8_t dataMoment) const
+{
+   if (dataMoment != 0)
+   {
+      return dataMoment;
+   }
+   else
+   {
+      return edgeValue_;
+   }
 }
 
 void Level3RadialView::Impl::ComputeCoordinates(

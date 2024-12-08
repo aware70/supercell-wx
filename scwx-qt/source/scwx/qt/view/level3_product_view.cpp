@@ -485,6 +485,50 @@ void Level3ProductView::UpdateColorTableLut()
    Q_EMIT ColorTableLutUpdated();
 }
 
+std::uint8_t Level3ProductView::ComputeEdgeValue() const
+{
+   std::uint8_t edgeValue = 0;
+
+   std::shared_ptr<wsr88d::rpg::ProductDescriptionBlock> descriptionBlock =
+      p->graphicMessage_->description_block();
+
+   const float offset = descriptionBlock->offset();
+   const float scale  = descriptionBlock->scale();
+
+   switch (p->category_)
+   {
+   case common::Level3ProductCategory::Velocity:
+      edgeValue = (scale > 0.0f) ? (-offset / scale) : -offset;
+      break;
+
+   case common::Level3ProductCategory::DifferentialReflectivity:
+      edgeValue = -offset;
+      break;
+
+   case common::Level3ProductCategory::SpectrumWidth:
+   case common::Level3ProductCategory::SpecificDifferentialPhase:
+      edgeValue = 2;
+      break;
+
+   case common::Level3ProductCategory::CorrelationCoefficient:
+      edgeValue = static_cast<std::uint8_t>(
+         std::max<std::uint16_t>(255, descriptionBlock->number_of_levels()));
+      break;
+
+   case common::Level3ProductCategory::Reflectivity:
+   case common::Level3ProductCategory::StormRelativeVelocity:
+   case common::Level3ProductCategory::VerticallyIntegratedLiquid:
+   case common::Level3ProductCategory::EchoTops:
+   case common::Level3ProductCategory::HydrometeorClassification:
+   case common::Level3ProductCategory::PrecipitationAccumulation:
+   default:
+      edgeValue = 0;
+      break;
+   }
+
+   return edgeValue;
+}
+
 std::optional<wsr88d::DataLevelCode>
 Level3ProductView::GetDataLevelCode(std::uint16_t level) const
 {
