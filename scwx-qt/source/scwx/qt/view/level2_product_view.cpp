@@ -838,10 +838,10 @@ void Level2ProductView::ComputeSweep()
                   continue;
                }
 
-               const std::uint8_t& dm1 = dataMomentsArray16[i];
-               const std::uint8_t& dm2 = dataMomentsArray16[i + 1];
-               const std::uint8_t& dm3 = nextDataMomentsArray16[i];
-               const std::uint8_t& dm4 = nextDataMomentsArray16[i + 1];
+               const std::uint16_t& dm1 = dataMomentsArray16[i];
+               const std::uint16_t& dm2 = dataMomentsArray16[i + 1];
+               const std::uint16_t& dm3 = nextDataMomentsArray16[i];
+               const std::uint16_t& dm4 = nextDataMomentsArray16[i + 1];
 
                if (dm1 < snrThreshold && dm1 != RANGE_FOLDED &&
                    dm2 < snrThreshold && dm2 != RANGE_FOLDED &&
