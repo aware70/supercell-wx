@@ -136,8 +136,9 @@ void PlacefileText::Impl::RenderTextDrawItem(
          std::chrono::system_clock::now() :
          selectedTime_;
 
-   const bool thresholdMet = mapDistance_ <= di->threshold_ ||
-        ((double)di->threshold_ < 0.0 && mapDistance_ >= -(di->threshold_));
+   const bool thresholdMet =
+      mapDistance_ <= di->threshold_ ||
+      ((double) di->threshold_ < 0.0 && mapDistance_ >= -(di->threshold_));
 
    if ((!thresholded_ || thresholdMet) &&
        (di->startTime_ == std::chrono::system_clock::time_point {} ||
