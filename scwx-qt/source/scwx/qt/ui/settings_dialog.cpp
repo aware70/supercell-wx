@@ -753,8 +753,7 @@ void SettingsDialogImpl::SetupGeneralTab()
 
    radarSiteThreshold_.SetSettingsVariable(
       generalSettings.radar_site_threshold());
-   radarSiteThreshold_.SetEditWidget(
-      self_->ui->radarSiteThresholdSpinBox);
+   radarSiteThreshold_.SetEditWidget(self_->ui->radarSiteThresholdSpinBox);
    radarSiteThreshold_.SetResetButton(self_->ui->resetRadarSiteThresholdButton);
 
    antiAliasingEnabled_.SetSettingsVariable(

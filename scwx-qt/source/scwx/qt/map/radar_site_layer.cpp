@@ -65,7 +65,9 @@ void RadarSiteLayer::Render(
    auto mapDistance = util::maplibre::GetMapDistance(params);
    auto threshold   = units::length::nautical_miles<double>(
       settings::GeneralSettings::Instance().radar_site_threshold().GetValue());
-   if (threshold.value() != 0.0 && mapDistance > threshold)
+
+   if (!(threshold.value() == 0.0 || mapDistance <= threshold ||
+         (threshold.value() < 0 && mapDistance >= -threshold)))
    {
       return;
    }

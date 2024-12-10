@@ -96,8 +96,8 @@ public:
       loopTime_.SetMaximum(1440);
       nmeaBaudRate_.SetMinimum(1);
       nmeaBaudRate_.SetMaximum(999999999);
-      radarSiteThreshold_.SetMinimum(0);
-      radarSiteThreshold_.SetMaximum(999);
+      radarSiteThreshold_.SetMinimum(-10000);
+      radarSiteThreshold_.SetMaximum( 10000);
 
       customStyleDrawLayer_.SetTransform([](const std::string& value)
                                          { return boost::trim_copy(value); });

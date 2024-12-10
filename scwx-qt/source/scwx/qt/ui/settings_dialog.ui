@@ -135,7 +135,7 @@
               <property name="geometry">
                <rect>
                 <x>0</x>
-                <y>-302</y>
+                <y>-303</y>
                 <width>511</width>
                 <height>733</height>
                </rect>
@@ -575,8 +575,11 @@
                     <property name="decimals">
                      <number>0</number>
                     </property>
+                    <property name="minimum">
+                     <double>-10000.000000000000000</double>
+                    </property>
                     <property name="maximum">
-                     <double>999.000000000000000</double>
+                     <double>10000.000000000000000</double>
                     </property>
                     <property name="stepType">
                      <enum>QAbstractSpinBox::StepType::DefaultStepType</enum>
