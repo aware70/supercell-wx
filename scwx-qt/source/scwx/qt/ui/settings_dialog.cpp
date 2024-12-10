@@ -133,6 +133,7 @@ public:
           &nmeaBaudRate_,
           &nmeaSource_,
           &warningsProvider_,
+          &radarSiteThreshold_,
           &antiAliasingEnabled_,
           &showMapAttribution_,
           &showMapCenter_,
@@ -249,6 +250,7 @@ public:
    settings::SettingsInterface<std::string>  theme_ {};
    settings::SettingsInterface<std::string>  themeFile_ {};
    settings::SettingsInterface<std::string>  warningsProvider_ {};
+   settings::SettingsInterface<double>       radarSiteThreshold_ {};
    settings::SettingsInterface<bool>         antiAliasingEnabled_ {};
    settings::SettingsInterface<bool>         showMapAttribution_ {};
    settings::SettingsInterface<bool>         showMapCenter_ {};
@@ -748,6 +750,12 @@ void SettingsDialogImpl::SetupGeneralTab()
    warningsProvider_.SetEditWidget(self_->ui->warningsProviderLineEdit);
    warningsProvider_.SetResetButton(self_->ui->resetWarningsProviderButton);
    warningsProvider_.EnableTrimming();
+
+   radarSiteThreshold_.SetSettingsVariable(
+      generalSettings.radar_site_threshold());
+   radarSiteThreshold_.SetEditWidget(
+      self_->ui->radarSiteThresholdSpinBox);
+   radarSiteThreshold_.SetResetButton(self_->ui->resetRadarSiteThresholdButton);
 
    antiAliasingEnabled_.SetSettingsVariable(
       generalSettings.anti_aliasing_enabled());
