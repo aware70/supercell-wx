@@ -572,6 +572,9 @@
                   </item>
                   <item row="23" column="2">
                    <widget class="QDoubleSpinBox" name="radarSiteThresholdSpinBox">
+                    <property name="suffix">
+                     <string>NM</string>
+                    </property>
                     <property name="decimals">
                      <number>0</number>
                     </property>
