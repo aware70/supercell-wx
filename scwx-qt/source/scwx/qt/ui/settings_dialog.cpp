@@ -758,10 +758,10 @@ void SettingsDialogImpl::SetupGeneralTab()
    radarSiteThreshold_.SetUnitLabel(self_->ui->radarSiteThresholdUnitLabel);
    auto radarSiteThresholdUpdateUnits = [this](const std::string& newValue)
    {
-      types::DistanceUnits radiusUnits =
+      const types::DistanceUnits radiusUnits =
          types::GetDistanceUnitsFromName(newValue);
-      double      radiusScale = types::GetDistanceUnitsScale(radiusUnits);
-      std::string abbreviation =
+      const double      radiusScale = types::GetDistanceUnitsScale(radiusUnits);
+      const std::string abbreviation =
          types::GetDistanceUnitsAbbreviation(radiusUnits);
 
       radarSiteThreshold_.SetUnit(radiusScale, abbreviation);
@@ -1082,10 +1082,10 @@ void SettingsDialogImpl::SetupAudioTab()
    alertAudioRadius_.SetUnitLabel(self_->ui->alertAudioRadiusUnitsLabel);
    auto alertAudioRadiusUpdateUnits = [this](const std::string& newValue)
    {
-      types::DistanceUnits radiusUnits =
+      const types::DistanceUnits radiusUnits =
          types::GetDistanceUnitsFromName(newValue);
-      double      radiusScale = types::GetDistanceUnitsScale(radiusUnits);
-      std::string abbreviation =
+      const double      radiusScale = types::GetDistanceUnitsScale(radiusUnits);
+      const std::string abbreviation =
          types::GetDistanceUnitsAbbreviation(radiusUnits);
 
       alertAudioRadius_.SetUnit(radiusScale, abbreviation);
