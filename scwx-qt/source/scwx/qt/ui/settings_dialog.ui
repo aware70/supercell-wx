@@ -122,7 +122,7 @@
           </sizepolicy>
          </property>
          <property name="currentIndex">
-          <number>0</number>
+          <number>3</number>
          </property>
          <widget class="QWidget" name="general">
           <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -572,8 +572,17 @@
                   </item>
                   <item row="23" column="2">
                    <widget class="QDoubleSpinBox" name="radarSiteThresholdSpinBox">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="toolTip">
+                     <string>Set to 0 to disable</string>
+                    </property>
                     <property name="suffix">
-                     <string>NM</string>
+                     <string/>
                     </property>
                     <property name="decimals">
                      <number>0</number>
@@ -586,6 +595,16 @@
                     </property>
                     <property name="stepType">
                      <enum>QAbstractSpinBox::StepType::DefaultStepType</enum>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="23" column="3">
+                   <widget class="QLabel" name="radarSiteThresholdUnitLabel">
+                    <property name="toolTip">
+                     <string/>
+                    </property>
+                    <property name="text">
+                     <string/>
                     </property>
                    </widget>
                   </item>
@@ -822,6 +841,9 @@
               </item>
               <item row="5" column="1" colspan="2">
                <widget class="QDoubleSpinBox" name="alertAudioRadiusSpinBox">
+                <property name="toolTip">
+                 <string>Set to 0 to disable</string>
+                </property>
                 <property name="decimals">
                  <number>2</number>
                 </property>

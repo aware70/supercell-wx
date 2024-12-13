@@ -755,6 +755,22 @@ void SettingsDialogImpl::SetupGeneralTab()
       generalSettings.radar_site_threshold());
    radarSiteThreshold_.SetEditWidget(self_->ui->radarSiteThresholdSpinBox);
    radarSiteThreshold_.SetResetButton(self_->ui->resetRadarSiteThresholdButton);
+   radarSiteThreshold_.SetUnitLabel(self_->ui->radarSiteThresholdUnitLabel);
+   auto radarSiteThresholdUpdateUnits = [this](const std::string& newValue)
+   {
+      types::DistanceUnits radiusUnits =
+         types::GetDistanceUnitsFromName(newValue);
+      double      radiusScale = types::GetDistanceUnitsScale(radiusUnits);
+      std::string abbreviation =
+         types::GetDistanceUnitsAbbreviation(radiusUnits);
+
+      radarSiteThreshold_.SetUnit(radiusScale, abbreviation);
+   };
+   settings::UnitSettings::Instance()
+      .distance_units()
+      .RegisterValueStagedCallback(radarSiteThresholdUpdateUnits);
+   radarSiteThresholdUpdateUnits(
+      settings::UnitSettings::Instance().distance_units().GetValue());
 
    antiAliasingEnabled_.SetSettingsVariable(
       generalSettings.anti_aliasing_enabled());
