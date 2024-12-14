@@ -12,7 +12,7 @@ find_package(Qt${QT_VERSION_MAJOR}
              
 find_package(Freetype)
 
-set(IMGUI_SOURCES imgui/imconfig.h
+set(IMGUI_SOURCES include/scwx/external/imgui/imconfig.h
                   imgui/imgui.cpp
                   imgui/imgui.h
                   imgui/imgui_demo.cpp
@@ -33,8 +33,9 @@ set(IMGUI_SOURCES imgui/imconfig.h
 add_library(imgui STATIC ${IMGUI_SOURCES})
 
 target_include_directories(imgui PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/imgui)
+target_include_directories(imgui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-target_compile_definitions(imgui PRIVATE IMGUI_ENABLE_FREETYPE)
+target_compile_definitions(imgui PUBLIC IMGUI_USER_CONFIG=<scwx/external/imgui/imconfig.h>)
 
 target_link_libraries(imgui PRIVATE Qt${QT_VERSION_MAJOR}::Widgets
                                     Freetype::Freetype)
