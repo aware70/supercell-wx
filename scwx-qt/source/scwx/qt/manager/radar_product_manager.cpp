@@ -525,9 +525,9 @@ void RadarProductManager::Initialize()
    p->CalculateCoordinates(radialGates1Degree,
                            units::angle::degrees<float> {1.0f}, // Radial angle
                            units::angle::degrees<float> {0.5f}, // Angle offset
-                           // Center of the first gate is twice the gate size
+                           // Center of the first gate is half the gate size
                            // distance from the radar site
-                           2.0f,
+                           0.5f,
                            coordinates1DegreeSmooth);
 
    timer.stop();
