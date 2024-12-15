@@ -58,7 +58,10 @@ public:
    std::vector<std::uint8_t> dataMoments8_ {};
    std::uint8_t              edgeValue_ {};
 
+   bool showSmoothedRangeFolding_ {false};
+
    std::shared_ptr<wsr88d::rpg::GenericRadialDataPacket> lastRadialData_ {};
+   bool lastShowSmoothedRangeFolding_ {false};
    bool lastSmoothingEnabled_ {false};
 
    float         latitude_;
@@ -130,7 +133,9 @@ void Level3RadialView::ComputeSweep()
 
    std::shared_ptr<manager::RadarProductManager> radarProductManager =
       radar_product_manager();
-   const bool smoothingEnabled = smoothing_enabled();
+   const bool smoothingEnabled    = smoothing_enabled();
+   p->showSmoothedRangeFolding_   = show_smoothed_range_folding();
+   bool& showSmoothedRangeFolding = p->showSmoothedRangeFolding_;
 
    // Retrieve message from Radar Product Manager
    std::shared_ptr<wsr88d::rpg::Level3Message> message;
@@ -162,7 +167,9 @@ void Level3RadialView::ComputeSweep()
       return;
    }
    else if (gpm == graphic_product_message() &&
-            smoothingEnabled == p->lastSmoothingEnabled_)
+            smoothingEnabled == p->lastSmoothingEnabled_ &&
+            (showSmoothedRangeFolding == p->lastShowSmoothedRangeFolding_ ||
+             !smoothingEnabled))
    {
       // Skip if this is the message we previously processed
       Q_EMIT SweepNotComputed(types::NoUpdateReason::NoChange);
@@ -170,7 +177,8 @@ void Level3RadialView::ComputeSweep()
    }
    set_graphic_product_message(gpm);
 
-   p->lastSmoothingEnabled_ = smoothingEnabled;
+   p->lastShowSmoothedRangeFolding_ = showSmoothedRangeFolding;
+   p->lastSmoothingEnabled_         = smoothingEnabled;
 
    // A message with radial data should have a Product Description Block and
    // Product Symbology Block
@@ -398,10 +406,16 @@ void Level3RadialView::ComputeSweep()
             const std::uint8_t& dm3 = nextDataMomentsArray8[i];
             const std::uint8_t& dm4 = nextDataMomentsArray8[i + 1];
 
-            if (dm1 < snrThreshold && dm1 != RANGE_FOLDED &&
-                dm2 < snrThreshold && dm2 != RANGE_FOLDED &&
-                dm3 < snrThreshold && dm3 != RANGE_FOLDED &&
-                dm4 < snrThreshold && dm4 != RANGE_FOLDED)
+            if ((!showSmoothedRangeFolding && //
+                 (dm1 < snrThreshold || dm1 == RANGE_FOLDED) &&
+                 (dm2 < snrThreshold || dm2 == RANGE_FOLDED) &&
+                 (dm3 < snrThreshold || dm3 == RANGE_FOLDED) &&
+                 (dm4 < snrThreshold || dm4 == RANGE_FOLDED)) ||
+                (showSmoothedRangeFolding && //
+                 dm1 < snrThreshold && dm1 != RANGE_FOLDED &&
+                 dm2 < snrThreshold && dm2 != RANGE_FOLDED &&
+                 dm3 < snrThreshold && dm3 != RANGE_FOLDED &&
+                 dm4 < snrThreshold && dm4 != RANGE_FOLDED))
             {
                // Skip only if all data moments are hidden
                continue;
@@ -502,7 +516,8 @@ void Level3RadialView::ComputeSweep()
 std::uint8_t
 Level3RadialView::Impl::RemapDataMoment(std::uint8_t dataMoment) const
 {
-   if (dataMoment != 0)
+   if (dataMoment != 0 &&
+       (dataMoment != RANGE_FOLDED || showSmoothedRangeFolding_))
    {
       return dataMoment;
    }

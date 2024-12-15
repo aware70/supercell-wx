@@ -135,6 +135,7 @@ public:
    std::shared_ptr<wsr88d::rda::GenericRadarData::MomentDataBlock>
       momentDataBlock0_;
 
+   bool lastShowSmoothedRangeFolding_ {false};
    bool lastSmoothingEnabled_ {false};
 
    std::vector<float>    coordinates_ {};
@@ -143,6 +144,8 @@ public:
    std::vector<uint16_t> dataMoments16_ {};
    std::vector<uint8_t>  cfpMoments_ {};
    std::uint16_t         edgeValue_ {};
+
+   bool showSmoothedRangeFolding_ {false};
 
    float                    latitude_;
    float                    longitude_;
@@ -519,7 +522,9 @@ void Level2ProductView::ComputeSweep()
 
    std::shared_ptr<manager::RadarProductManager> radarProductManager =
       radar_product_manager();
-   const bool smoothingEnabled = smoothing_enabled();
+   const bool smoothingEnabled    = smoothing_enabled();
+   p->showSmoothedRangeFolding_   = show_smoothed_range_folding();
+   bool& showSmoothedRangeFolding = p->showSmoothedRangeFolding_;
 
    std::shared_ptr<wsr88d::rda::ElevationScan> radarData;
    std::chrono::system_clock::time_point       requestedTime {selected_time()};
@@ -533,13 +538,16 @@ void Level2ProductView::ComputeSweep()
       return;
    }
    if (radarData == p->elevationScan_ &&
-       smoothingEnabled == p->lastSmoothingEnabled_)
+       smoothingEnabled == p->lastSmoothingEnabled_ &&
+       (showSmoothedRangeFolding == p->lastShowSmoothedRangeFolding_ ||
+        !smoothingEnabled))
    {
       Q_EMIT SweepNotComputed(types::NoUpdateReason::NoChange);
       return;
    }
 
-   p->lastSmoothingEnabled_ = smoothingEnabled;
+   p->lastShowSmoothedRangeFolding_ = showSmoothedRangeFolding;
+   p->lastSmoothingEnabled_         = smoothingEnabled;
 
    logger_->debug("Computing Sweep");
 
@@ -798,10 +806,16 @@ void Level2ProductView::ComputeSweep()
                const std::uint8_t& dm3 = nextDataMomentsArray8[i];
                const std::uint8_t& dm4 = nextDataMomentsArray8[i + 1];
 
-               if (dm1 < snrThreshold && dm1 != RANGE_FOLDED &&
-                   dm2 < snrThreshold && dm2 != RANGE_FOLDED &&
-                   dm3 < snrThreshold && dm3 != RANGE_FOLDED &&
-                   dm4 < snrThreshold && dm4 != RANGE_FOLDED)
+               if ((!showSmoothedRangeFolding && //
+                    (dm1 < snrThreshold || dm1 == RANGE_FOLDED) &&
+                    (dm2 < snrThreshold || dm2 == RANGE_FOLDED) &&
+                    (dm3 < snrThreshold || dm3 == RANGE_FOLDED) &&
+                    (dm4 < snrThreshold || dm4 == RANGE_FOLDED)) ||
+                   (showSmoothedRangeFolding && //
+                    dm1 < snrThreshold && dm1 != RANGE_FOLDED &&
+                    dm2 < snrThreshold && dm2 != RANGE_FOLDED &&
+                    dm3 < snrThreshold && dm3 != RANGE_FOLDED &&
+                    dm4 < snrThreshold && dm4 != RANGE_FOLDED))
                {
                   // Skip only if all data moments are hidden
                   continue;
@@ -855,10 +869,16 @@ void Level2ProductView::ComputeSweep()
                const std::uint16_t& dm3 = nextDataMomentsArray16[i];
                const std::uint16_t& dm4 = nextDataMomentsArray16[i + 1];
 
-               if (dm1 < snrThreshold && dm1 != RANGE_FOLDED &&
-                   dm2 < snrThreshold && dm2 != RANGE_FOLDED &&
-                   dm3 < snrThreshold && dm3 != RANGE_FOLDED &&
-                   dm4 < snrThreshold && dm4 != RANGE_FOLDED)
+               if ((!showSmoothedRangeFolding && //
+                    (dm1 < snrThreshold || dm1 == RANGE_FOLDED) &&
+                    (dm2 < snrThreshold || dm2 == RANGE_FOLDED) &&
+                    (dm3 < snrThreshold || dm3 == RANGE_FOLDED) &&
+                    (dm4 < snrThreshold || dm4 == RANGE_FOLDED)) ||
+                   (showSmoothedRangeFolding && //
+                    dm1 < snrThreshold && dm1 != RANGE_FOLDED &&
+                    dm2 < snrThreshold && dm2 != RANGE_FOLDED &&
+                    dm3 < snrThreshold && dm3 != RANGE_FOLDED &&
+                    dm4 < snrThreshold && dm4 != RANGE_FOLDED))
                {
                   // Skip only if all data moments are hidden
                   continue;
@@ -1012,7 +1032,8 @@ void Level2ProductView::Impl::ComputeEdgeValue()
 template<typename T>
 T Level2ProductView::Impl::RemapDataMoment(T dataMoment) const
 {
-   if (dataMoment != 0)
+   if (dataMoment != 0 &&
+       (dataMoment != RANGE_FOLDED || showSmoothedRangeFolding_))
    {
       return dataMoment;
    }
