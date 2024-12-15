@@ -135,9 +135,9 @@
               <property name="geometry">
                <rect>
                 <x>0</x>
-                <y>-246</y>
-                <width>511</width>
-                <height>703</height>
+                <y>-272</y>
+                <width>513</width>
+                <height>702</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout">
@@ -563,6 +563,19 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="cursorIconAlwaysOnCheckBox">
+                 <property name="acceptDrops">
+                  <bool>false</bool>
+                 </property>
+                 <property name="toolTip">
+                  <string/>
+                 </property>
+                 <property name="text">
+                  <string>Multi-Pane Cursor Marker Always On</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="showMapAttributionCheckBox">
                  <property name="text">
                   <string>Show Map Attribution</string>
@@ -584,22 +597,16 @@
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="enableUpdateNotificationsCheckBox">
+                <widget class="QCheckBox" name="showSmoothedRangeFoldingCheckBox">
                  <property name="text">
-                  <string>Update Notifications Enabled</string>
+                  <string>Show Range Folding when Smoothing Radar Data</string>
                  </property>
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="cursorIconAlwaysOnCheckBox">
-                 <property name="acceptDrops">
-                  <bool>false</bool>
-                 </property>
-                 <property name="toolTip">
-                  <string/>
-                 </property>
+                <widget class="QCheckBox" name="enableUpdateNotificationsCheckBox">
                  <property name="text">
-                  <string>Multi-Pane Cursor Marker Always On</string>
+                  <string>Update Notifications Enabled</string>
                  </property>
                 </widget>
                </item>
