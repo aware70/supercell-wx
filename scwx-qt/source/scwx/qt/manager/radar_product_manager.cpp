@@ -10,7 +10,6 @@
 #include <scwx/util/threads.hpp>
 #include <scwx/wsr88d/nexrad_file_factory.hpp>
 
-#include <deque>
 #include <execution>
 #include <mutex>
 #include <shared_mutex>
@@ -63,6 +62,8 @@ static constexpr uint32_t NUM_COORIDNATES_1_DEGREE =
    NUM_RADIAL_GATES_1_DEGREE * 2;
 
 static const std::string kDefaultLevel3Product_ {"N0B"};
+
+static constexpr std::size_t kTimerPlaces_ {6u};
 
 static constexpr std::chrono::seconds kFastRetryInterval_ {15};
 static constexpr std::chrono::seconds kSlowRetryInterval_ {120};
@@ -464,6 +465,8 @@ void RadarProductManager::Initialize()
    const auto radialGates0_5Degree =
       boost::irange<uint32_t>(0, NUM_RADIAL_GATES_0_5_DEGREE);
 
+   // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers): Values are given
+   // descriptions
    p->CalculateCoordinates(
       radialGates0_5Degree,
       units::angle::degrees<float> {0.5f}, // Radial angle
@@ -471,10 +474,11 @@ void RadarProductManager::Initialize()
       // Far end of the first gate is the gate size distance from the radar site
       1.0f,
       coordinates0_5Degree);
+   // NOLINTEND(cppcoreguidelines-avoid-magic-numbers)
 
    timer.stop();
    logger_->debug("Coordinates (0.5 degree) calculated in {}",
-                  timer.format(6, "%ws"));
+                  timer.format(kTimerPlaces_, "%ws"));
 
    // Calculate half degree smooth azimuth coordinates
    timer.start();
@@ -483,6 +487,8 @@ void RadarProductManager::Initialize()
 
    coordinates0_5DegreeSmooth.resize(NUM_COORIDNATES_0_5_DEGREE);
 
+   // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers): Values are given
+   // descriptions
    p->CalculateCoordinates(radialGates0_5Degree,
                            units::angle::degrees<float> {0.5f},  // Radial angle
                            units::angle::degrees<float> {0.25f}, // Angle offset
@@ -490,10 +496,11 @@ void RadarProductManager::Initialize()
                            // distance from the radar site
                            0.5f,
                            coordinates0_5DegreeSmooth);
+   // NOLINTEND(cppcoreguidelines-avoid-magic-numbers)
 
    timer.stop();
    logger_->debug("Coordinates (0.5 degree smooth) calculated in {}",
-                  timer.format(6, "%ws"));
+                  timer.format(kTimerPlaces_, "%ws"));
 
    // Calculate 1 degree azimuth coordinates
    timer.start();
@@ -504,6 +511,8 @@ void RadarProductManager::Initialize()
    const auto radialGates1Degree =
       boost::irange<uint32_t>(0, NUM_RADIAL_GATES_1_DEGREE);
 
+   // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers): Values are given
+   // descriptions
    p->CalculateCoordinates(
       radialGates1Degree,
       units::angle::degrees<float> {1.0f}, // Radial angle
@@ -511,10 +520,11 @@ void RadarProductManager::Initialize()
       // Far end of the first gate is the gate size distance from the radar site
       1.0f,
       coordinates1Degree);
+   // NOLINTEND(cppcoreguidelines-avoid-magic-numbers)
 
    timer.stop();
    logger_->debug("Coordinates (1 degree) calculated in {}",
-                  timer.format(6, "%ws"));
+                  timer.format(kTimerPlaces_, "%ws"));
 
    // Calculate 1 degree smooth azimuth coordinates
    timer.start();
@@ -522,6 +532,8 @@ void RadarProductManager::Initialize()
 
    coordinates1DegreeSmooth.resize(NUM_COORIDNATES_1_DEGREE);
 
+   // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers): Values are given
+   // descriptions
    p->CalculateCoordinates(radialGates1Degree,
                            units::angle::degrees<float> {1.0f}, // Radial angle
                            units::angle::degrees<float> {0.5f}, // Angle offset
@@ -529,10 +541,11 @@ void RadarProductManager::Initialize()
                            // distance from the radar site
                            0.5f,
                            coordinates1DegreeSmooth);
+   // NOLINTEND(cppcoreguidelines-avoid-magic-numbers)
 
    timer.stop();
    logger_->debug("Coordinates (1 degree smooth) calculated in {}",
-                  timer.format(6, "%ws"));
+                  timer.format(kTimerPlaces_, "%ws"));
 
    p->initialized_ = true;
 }
@@ -558,23 +571,25 @@ void RadarProductManagerImpl::CalculateCoordinates(
       radialGates.end(),
       [&](uint32_t radialGate)
       {
-         const uint16_t gate =
-            static_cast<uint16_t>(radialGate % common::MAX_DATA_MOMENT_GATES);
-         const uint16_t radial =
-            static_cast<uint16_t>(radialGate / common::MAX_DATA_MOMENT_GATES);
+         const auto gate = static_cast<std::uint16_t>(
+            radialGate % common::MAX_DATA_MOMENT_GATES);
+         const auto radial = static_cast<std::uint16_t>(
+            radialGate / common::MAX_DATA_MOMENT_GATES);
 
-         const float angle = radial * radialAngle.value() + angleOffset.value();
-         const float range = (gate + gateRangeOffset) * gateSize;
-         const size_t offset = radialGate * 2;
+         const float angle = static_cast<float>(radial) * radialAngle.value() +
+                             angleOffset.value();
+         const float range =
+            (static_cast<float>(gate) + gateRangeOffset) * gateSize;
+         const std::size_t offset = static_cast<std::size_t>(radialGate) * 2;
 
-         double latitude;
-         double longitude;
+         double latitude  = 0.0;
+         double longitude = 0.0;
 
          geodesic.Direct(
             radar.first, radar.second, angle, range, latitude, longitude);
 
-         outputCoordinates[offset]     = latitude;
-         outputCoordinates[offset + 1] = longitude;
+         outputCoordinates[offset]     = static_cast<float>(latitude);
+         outputCoordinates[offset + 1] = static_cast<float>(longitude);
       });
 }
 

@@ -25,6 +25,9 @@ static constexpr std::uint32_t kMaxRadialGates_ =
    common::MAX_0_5_DEGREE_RADIALS * common::MAX_DATA_MOMENT_GATES;
 static constexpr std::uint32_t kMaxCoordinates_ = kMaxRadialGates_ * 2u;
 
+static constexpr std::size_t kVerticesPerGate_       = 6u;
+static constexpr std::size_t kVerticesPerOriginGate_ = 3u;
+
 static constexpr uint16_t RANGE_FOLDED      = 1u;
 static constexpr uint32_t VERTICES_PER_BIN  = 6u;
 static constexpr uint32_t VALUES_PER_VERTEX = 2u;
@@ -769,7 +772,11 @@ void Level2ProductView::ComputeSweep()
             continue;
          }
 
-         std::size_t vertexCount = (gate > 0) ? 6 : 3;
+         std::size_t vertexCount =
+            (gate > 0) ? kVerticesPerGate_ : kVerticesPerOriginGate_;
+
+         // Allow pointer arithmetic here, as bounds have already been checked
+         // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 
          // Store data moment value
          if (dataMomentsArray8 != nullptr)
@@ -902,6 +909,8 @@ void Level2ProductView::ComputeSweep()
             }
          }
 
+         // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+
          // Store vertices
          if (gate > 0)
          {
@@ -919,13 +928,15 @@ void Level2ProductView::ComputeSweep()
                                       common::MAX_DATA_MOMENT_GATES +
                                    baseCoord) *
                                   2;
-            std::size_t offset2 = offset1 + gateSize * 2;
+            std::size_t offset2 =
+               offset1 + static_cast<std::size_t>(gateSize) * 2;
             std::size_t offset3 =
                (((startRadial + radial + 1) % vertexRadials) *
                    common::MAX_DATA_MOMENT_GATES +
                 baseCoord) *
                2;
-            std::size_t offset4 = offset3 + gateSize * 2;
+            std::size_t offset4 =
+               offset3 + static_cast<std::size_t>(gateSize) * 2;
 
             vertices[vIndex++] = coordinates[offset1];
             vertices[vIndex++] = coordinates[offset1 + 1];
@@ -945,7 +956,7 @@ void Level2ProductView::ComputeSweep()
             vertices[vIndex++] = coordinates[offset4];
             vertices[vIndex++] = coordinates[offset4 + 1];
 
-            vertexCount = 6;
+            vertexCount = kVerticesPerGate_;
          }
          else
          {
@@ -970,7 +981,7 @@ void Level2ProductView::ComputeSweep()
             vertices[vIndex++] = coordinates[offset2];
             vertices[vIndex++] = coordinates[offset2 + 1];
 
-            vertexCount = 3;
+            vertexCount = kVerticesPerOriginGate_;
          }
       }
    }
@@ -1010,7 +1021,7 @@ void Level2ProductView::Impl::ComputeEdgeValue()
    {
    case wsr88d::rda::DataBlockType::MomentVel:
    case wsr88d::rda::DataBlockType::MomentZdr:
-      edgeValue_ = offset;
+      edgeValue_ = static_cast<std::uint16_t>(offset);
       break;
 
    case wsr88d::rda::DataBlockType::MomentSw:
@@ -1019,7 +1030,7 @@ void Level2ProductView::Impl::ComputeEdgeValue()
       break;
 
    case wsr88d::rda::DataBlockType::MomentRho:
-      edgeValue_ = 255;
+      edgeValue_ = std::numeric_limits<std::uint8_t>::max();
       break;
 
    case wsr88d::rda::DataBlockType::MomentRef:
@@ -1194,30 +1205,32 @@ void Level2ProductView::Impl::ComputeCoordinates(
             }
          }
 
-         std::for_each(std::execution::par_unseq,
-                       gates.begin(),
-                       gates.end(),
-                       [&](std::uint32_t gate)
-                       {
-                          const std::uint32_t radialGate =
-                             radial * common::MAX_DATA_MOMENT_GATES + gate;
-                          const float range =
-                             (gate + gateRangeOffset) * gateSize;
-                          const std::size_t offset = radialGate * 2;
+         std::for_each(
+            std::execution::par_unseq,
+            gates.begin(),
+            gates.end(),
+            [&](std::uint32_t gate)
+            {
+               const std::uint32_t radialGate =
+                  radial * common::MAX_DATA_MOMENT_GATES + gate;
+               const float range =
+                  (static_cast<float>(gate) + gateRangeOffset) * gateSize;
+               const std::size_t offset =
+                  static_cast<std::size_t>(radialGate) * 2;
 
-                          double latitude;
-                          double longitude;
+               double latitude  = 0.0;
+               double longitude = 0.0;
 
-                          geodesic.Direct(radarLatitude,
-                                          radarLongitude,
-                                          angle.value(),
-                                          range,
-                                          latitude,
-                                          longitude);
+               geodesic.Direct(radarLatitude,
+                               radarLongitude,
+                               angle.value(),
+                               range,
+                               latitude,
+                               longitude);
 
-                          coordinates_[offset]     = latitude;
-                          coordinates_[offset + 1] = longitude;
-                       });
+               coordinates_[offset]     = static_cast<float>(latitude);
+               coordinates_[offset + 1] = static_cast<float>(longitude);
+            });
       });
    timer.stop();
    logger_->debug("Coordinates calculated in {}", timer.format(6, "%ws"));

@@ -6,7 +6,6 @@
 #include <scwx/util/logger.hpp>
 
 #include <array>
-#include <execution>
 
 #include <boost/json.hpp>
 
@@ -53,21 +52,21 @@ public:
    {
       for (std::size_t i = 0; i < kCount_; i++)
       {
-         map_[i].mapStyle_.SetDefault(kDefaultMapStyle_);
-         map_[i].radarSite_.SetDefault(kDefaultRadarSite_);
-         map_[i].radarProductGroup_.SetDefault(
+         map_.at(i).mapStyle_.SetDefault(kDefaultMapStyle_);
+         map_.at(i).radarSite_.SetDefault(kDefaultRadarSite_);
+         map_.at(i).radarProductGroup_.SetDefault(
             kDefaultRadarProductGroupString_);
-         map_[i].radarProduct_.SetDefault(kDefaultRadarProduct_[i]);
-         map_[i].smoothingEnabled_.SetDefault(kDefaultSmoothingEnabled_);
+         map_.at(i).radarProduct_.SetDefault(kDefaultRadarProduct_.at(i));
+         map_.at(i).smoothingEnabled_.SetDefault(kDefaultSmoothingEnabled_);
 
-         map_[i].radarSite_.SetValidator(
+         map_.at(i).radarSite_.SetValidator(
             [](const std::string& value)
             {
                // Radar site must exist
                return config::RadarSite::Get(value) != nullptr;
             });
 
-         map_[i].radarProductGroup_.SetValidator(
+         map_.at(i).radarProductGroup_.SetValidator(
             [](const std::string& value)
             {
                // Radar product group must be valid
@@ -76,12 +75,12 @@ public:
                return radarProductGroup != common::RadarProductGroup::Unknown;
             });
 
-         map_[i].radarProduct_.SetValidator(
+         map_.at(i).radarProduct_.SetValidator(
             [this, i](const std::string& value)
             {
                common::RadarProductGroup radarProductGroup =
                   common::GetRadarProductGroup(
-                     map_[i].radarProductGroup_.GetValue());
+                     map_.at(i).radarProductGroup_.GetValue());
 
                if (radarProductGroup == common::RadarProductGroup::Level2)
                {
@@ -97,11 +96,11 @@ public:
             });
 
          variables_.insert(variables_.cend(),
-                           {&map_[i].mapStyle_,
-                            &map_[i].radarSite_,
-                            &map_[i].radarProductGroup_,
-                            &map_[i].radarProduct_,
-                            &map_[i].smoothingEnabled_});
+                           {&map_.at(i).mapStyle_,
+                            &map_.at(i).radarSite_,
+                            &map_.at(i).radarProductGroup_,
+                            &map_.at(i).radarProduct_,
+                            &map_.at(i).smoothingEnabled_});
       }
    }
 
@@ -109,11 +108,11 @@ public:
 
    void SetDefaults(std::size_t i)
    {
-      map_[i].mapStyle_.SetValueToDefault();
-      map_[i].radarSite_.SetValueToDefault();
-      map_[i].radarProductGroup_.SetValueToDefault();
-      map_[i].radarProduct_.SetValueToDefault();
-      map_[i].smoothingEnabled_.SetValueToDefault();
+      map_.at(i).mapStyle_.SetValueToDefault();
+      map_.at(i).radarSite_.SetValueToDefault();
+      map_.at(i).radarProductGroup_.SetValueToDefault();
+      map_.at(i).radarProduct_.SetValueToDefault();
+      map_.at(i).smoothingEnabled_.SetValueToDefault();
    }
 
    friend void tag_invoke(boost::json::value_from_tag,
@@ -160,28 +159,28 @@ std::size_t MapSettings::count() const
 
 SettingsVariable<std::string>& MapSettings::map_style(std::size_t i) const
 {
-   return p->map_[i].mapStyle_;
+   return p->map_.at(i).mapStyle_;
 }
 
 SettingsVariable<std::string>& MapSettings::radar_site(std::size_t i) const
 {
-   return p->map_[i].radarSite_;
+   return p->map_.at(i).radarSite_;
 }
 
 SettingsVariable<std::string>&
 MapSettings::radar_product_group(std::size_t i) const
 {
-   return p->map_[i].radarProductGroup_;
+   return p->map_.at(i).radarProductGroup_;
 }
 
 SettingsVariable<std::string>& MapSettings::radar_product(std::size_t i) const
 {
-   return p->map_[i].radarProduct_;
+   return p->map_.at(i).radarProduct_;
 }
 
 SettingsVariable<bool>& MapSettings::smoothing_enabled(std::size_t i) const
 {
-   return p->map_[i].smoothingEnabled_;
+   return p->map_.at(i).smoothingEnabled_;
 }
 
 bool MapSettings::Shutdown()
@@ -191,7 +190,7 @@ bool MapSettings::Shutdown()
    // Commit settings that are managed separate from the settings dialog
    for (std::size_t i = 0; i < kCount_; ++i)
    {
-      Impl::MapData& mapRecordSettings = p->map_[i];
+      Impl::MapData& mapRecordSettings = p->map_.at(i);
 
       dataChanged |= mapRecordSettings.mapStyle_.Commit();
       dataChanged |= mapRecordSettings.smoothingEnabled_.Commit();
@@ -215,7 +214,7 @@ bool MapSettings::ReadJson(const boost::json::object& json)
          if (i < mapArray.size() && mapArray.at(i).is_object())
          {
             const boost::json::object& mapRecord = mapArray.at(i).as_object();
-            Impl::MapData&             mapRecordSettings = p->map_[i];
+            Impl::MapData&             mapRecordSettings = p->map_.at(i);
 
             // Load JSON Elements
             validated &= mapRecordSettings.mapStyle_.ReadValue(mapRecord);

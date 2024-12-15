@@ -6,8 +6,6 @@
 #include <scwx/qt/view/radar_product_view.hpp>
 #include <scwx/util/logger.hpp>
 
-#include <execution>
-
 #if defined(_MSC_VER)
 #   pragma warning(push, 0)
 #endif
