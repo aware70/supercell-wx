@@ -29,7 +29,7 @@ public:
    void keyPressEvent(QKeyEvent* ev) override final;
    void keyReleaseEvent(QKeyEvent* ev) override final;
    void showEvent(QShowEvent* event) override;
-   void closeEvent(QCloseEvent *event) override;
+   void closeEvent(QCloseEvent* event) override;
 
 signals:
    void ActiveMapMoved(double latitude, double longitude);
@@ -49,6 +49,7 @@ private slots:
    void on_actionImGuiDebug_triggered();
    void on_actionDumpLayerList_triggered();
    void on_actionDumpRadarProductRecords_triggered();
+   void on_actionRadarWireframe_triggered(bool checked);
    void on_actionUserManual_triggered();
    void on_actionDiscord_triggered();
    void on_actionGitHubRepository_triggered();

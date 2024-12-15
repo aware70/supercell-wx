@@ -728,6 +728,18 @@ std::uint16_t MapWidget::GetVcp() const
    }
 }
 
+bool MapWidget::GetRadarWireframeEnabled() const
+{
+   return p->context_->settings().radarWireframeEnabled_;
+}
+
+void MapWidget::SetRadarWireframeEnabled(bool wireframeEnabled)
+{
+   p->context_->settings().radarWireframeEnabled_ = wireframeEnabled;
+   QMetaObject::invokeMethod(
+      this, static_cast<void (QWidget::*)()>(&QWidget::update));
+}
+
 bool MapWidget::GetSmoothingEnabled() const
 {
    return p->smoothingEnabled_;

@@ -9,16 +9,17 @@ namespace map
 
 struct MapSettings
 {
-   explicit MapSettings() : isActive_ {false} {}
+   explicit MapSettings() {}
    ~MapSettings() = default;
 
-   MapSettings(const MapSettings&) = delete;
+   MapSettings(const MapSettings&)            = delete;
    MapSettings& operator=(const MapSettings&) = delete;
 
-   MapSettings(MapSettings&&) noexcept = default;
+   MapSettings(MapSettings&&) noexcept            = default;
    MapSettings& operator=(MapSettings&&) noexcept = default;
 
-   bool isActive_;
+   bool isActive_ {false};
+   bool radarWireframeEnabled_ {false};
 };
 
 } // namespace map

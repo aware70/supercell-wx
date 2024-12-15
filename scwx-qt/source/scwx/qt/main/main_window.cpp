@@ -644,6 +644,11 @@ void MainWindow::on_actionDumpRadarProductRecords_triggered()
    manager::RadarProductManager::DumpRecords();
 }
 
+void MainWindow::on_actionRadarWireframe_triggered(bool checked)
+{
+   p->activeMap_->SetRadarWireframeEnabled(checked);
+}
+
 void MainWindow::on_actionUserManual_triggered()
 {
    QDesktopServices::openUrl(QUrl {"https://supercell-wx.readthedocs.io/"});
@@ -1487,6 +1492,9 @@ void MainWindowImpl::UpdateRadarProductSettings()
    mainWindow_->ui->smoothRadarDataCheckBox->setCheckState(
       activeMap_->GetSmoothingEnabled() ? Qt::CheckState::Checked :
                                           Qt::CheckState::Unchecked);
+
+   mainWindow_->ui->actionRadarWireframe->setChecked(
+      activeMap_->GetRadarWireframeEnabled());
 }
 
 void MainWindowImpl::UpdateRadarSite()

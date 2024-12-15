@@ -47,6 +47,7 @@ public:
    common::RadarProductGroup             GetRadarProductGroup() const;
    std::string                           GetRadarProductName() const;
    std::shared_ptr<config::RadarSite>    GetRadarSite() const;
+   bool                                  GetRadarWireframeEnabled() const;
    std::chrono::system_clock::time_point GetSelectedTime() const;
    bool                                  GetSmoothingEnabled() const;
    std::uint16_t                         GetVcp() const;
@@ -118,6 +119,7 @@ public:
                          double pitch);
    void SetInitialMapStyle(const std::string& styleName);
    void SetMapStyle(const std::string& styleName);
+   void SetRadarWireframeEnabled(bool enabled);
    void SetSmoothingEnabled(bool enabled);
 
    /**

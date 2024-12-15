@@ -97,6 +97,8 @@
     <addaction name="separator"/>
     <addaction name="actionDumpLayerList"/>
     <addaction name="actionDumpRadarProductRecords"/>
+    <addaction name="separator"/>
+    <addaction name="actionRadarWireframe"/>
    </widget>
    <widget class="QMenu" name="menuTools">
     <property name="title">
@@ -502,6 +504,14 @@
    </property>
    <property name="text">
     <string>Location &amp;Marker Manager</string>
+   </property>
+  </action>
+  <action name="actionRadarWireframe">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Radar &amp;Wireframe</string>
    </property>
   </action>
  </widget>
