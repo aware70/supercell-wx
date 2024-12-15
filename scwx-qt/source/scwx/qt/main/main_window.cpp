@@ -1092,16 +1092,25 @@ void MainWindowImpl::ConnectOtherSignals()
                  }
               }
            });
-   connect(mainWindow_->ui->smoothRadarDataCheckBox,
-           &QCheckBox::checkStateChanged,
-           mainWindow_,
-           [this](Qt::CheckState state)
-           {
-              bool smoothingEnabled = (state == Qt::CheckState::Checked);
+   connect(
+      mainWindow_->ui->smoothRadarDataCheckBox,
+      &QCheckBox::checkStateChanged,
+      mainWindow_,
+      [this](Qt::CheckState state)
+      {
+         bool smoothingEnabled = (state == Qt::CheckState::Checked);
 
-              // Turn on smoothing
-              activeMap_->SetSmoothingEnabled(smoothingEnabled);
-           });
+         auto it = std::find(maps_.cbegin(), maps_.cend(), activeMap_);
+         if (it != maps_.cend())
+         {
+            std::size_t i = std::distance(maps_.cbegin(), it);
+            settings::MapSettings::Instance().smoothing_enabled(i).StageValue(
+               smoothingEnabled);
+         }
+
+         // Turn on smoothing
+         activeMap_->SetSmoothingEnabled(smoothingEnabled);
+      });
    connect(mainWindow_->ui->trackLocationCheckBox,
            &QCheckBox::checkStateChanged,
            mainWindow_,
