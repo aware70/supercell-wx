@@ -25,6 +25,7 @@ public:
    ProductSettings(ProductSettings&&) noexcept;
    ProductSettings& operator=(ProductSettings&&) noexcept;
 
+   SettingsVariable<bool>& show_smoothed_range_folding() const;
    SettingsVariable<bool>& sti_forecast_enabled() const;
    SettingsVariable<bool>& sti_past_enabled() const;
 

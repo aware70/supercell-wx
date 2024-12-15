@@ -27,11 +27,14 @@ static const std::string kMapStyleName_ {"map_style"};
 static const std::string kRadarSiteName_ {"radar_site"};
 static const std::string kRadarProductGroupName_ {"radar_product_group"};
 static const std::string kRadarProductName_ {"radar_product"};
+static const std::string kSmoothingEnabledName_ {"smoothing_enabled"};
 
-static const std::string                   kDefaultMapStyle_ {"?"};
+static const std::string kDefaultMapStyle_ {"?"};
 static const std::string kDefaultRadarProductGroupString_ = "L3";
 static const std::array<std::string, kCount_> kDefaultRadarProduct_ {
    "N0B", "N0G", "N0C", "N0X"};
+
+static constexpr bool kDefaultSmoothingEnabled_ {false};
 
 class MapSettings::Impl
 {
@@ -43,6 +46,7 @@ public:
       SettingsVariable<std::string> radarProductGroup_ {
          kRadarProductGroupName_};
       SettingsVariable<std::string> radarProduct_ {kRadarProductName_};
+      SettingsVariable<bool>        smoothingEnabled_ {kSmoothingEnabledName_};
    };
 
    explicit Impl()
@@ -54,6 +58,7 @@ public:
          map_[i].radarProductGroup_.SetDefault(
             kDefaultRadarProductGroupString_);
          map_[i].radarProduct_.SetDefault(kDefaultRadarProduct_[i]);
+         map_[i].smoothingEnabled_.SetDefault(kDefaultSmoothingEnabled_);
 
          map_[i].radarSite_.SetValidator(
             [](const std::string& value)
@@ -95,7 +100,8 @@ public:
                            {&map_[i].mapStyle_,
                             &map_[i].radarSite_,
                             &map_[i].radarProductGroup_,
-                            &map_[i].radarProduct_});
+                            &map_[i].radarProduct_,
+                            &map_[i].smoothingEnabled_});
       }
    }
 
@@ -107,6 +113,7 @@ public:
       map_[i].radarSite_.SetValueToDefault();
       map_[i].radarProductGroup_.SetValueToDefault();
       map_[i].radarProduct_.SetValueToDefault();
+      map_[i].smoothingEnabled_.SetValueToDefault();
    }
 
    friend void tag_invoke(boost::json::value_from_tag,
@@ -116,7 +123,8 @@ public:
       jv = {{kMapStyleName_, data.mapStyle_.GetValue()},
             {kRadarSiteName_, data.radarSite_.GetValue()},
             {kRadarProductGroupName_, data.radarProductGroup_.GetValue()},
-            {kRadarProductName_, data.radarProduct_.GetValue()}};
+            {kRadarProductName_, data.radarProduct_.GetValue()},
+            {kSmoothingEnabledName_, data.smoothingEnabled_.GetValue()}};
    }
 
    friend bool operator==(const MapData& lhs, const MapData& rhs)
@@ -124,7 +132,8 @@ public:
       return (lhs.mapStyle_ == rhs.mapStyle_ && //
               lhs.radarSite_ == rhs.radarSite_ &&
               lhs.radarProductGroup_ == rhs.radarProductGroup_ &&
-              lhs.radarProduct_ == rhs.radarProduct_);
+              lhs.radarProduct_ == rhs.radarProduct_ &&
+              lhs.smoothingEnabled_ == rhs.smoothingEnabled_);
    }
 
    std::array<MapData, kCount_>       map_ {};
@@ -170,6 +179,11 @@ SettingsVariable<std::string>& MapSettings::radar_product(std::size_t i) const
    return p->map_[i].radarProduct_;
 }
 
+SettingsVariable<bool>& MapSettings::smoothing_enabled(std::size_t i) const
+{
+   return p->map_[i].smoothingEnabled_;
+}
+
 bool MapSettings::Shutdown()
 {
    bool dataChanged = false;
@@ -180,6 +194,7 @@ bool MapSettings::Shutdown()
       Impl::MapData& mapRecordSettings = p->map_[i];
 
       dataChanged |= mapRecordSettings.mapStyle_.Commit();
+      dataChanged |= mapRecordSettings.smoothingEnabled_.Commit();
    }
 
    return dataChanged;
@@ -207,6 +222,8 @@ bool MapSettings::ReadJson(const boost::json::object& json)
             validated &= mapRecordSettings.radarSite_.ReadValue(mapRecord);
             validated &=
                mapRecordSettings.radarProductGroup_.ReadValue(mapRecord);
+            validated &=
+               mapRecordSettings.smoothingEnabled_.ReadValue(mapRecord);
 
             bool productValidated =
                mapRecordSettings.radarProduct_.ReadValue(mapRecord);

@@ -30,6 +30,7 @@ public:
    SettingsVariable<std::string>& radar_site(std::size_t i) const;
    SettingsVariable<std::string>& radar_product_group(std::size_t i) const;
    SettingsVariable<std::string>& radar_product(std::size_t i) const;
+   SettingsVariable<bool>&        smoothing_enabled(std::size_t i) const;
 
    bool Shutdown();
 
