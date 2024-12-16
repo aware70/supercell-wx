@@ -114,8 +114,8 @@ public:
    Impl(const Impl&)            = delete;
    Impl& operator=(const Impl&) = delete;
 
-   Impl(Impl&&) noexcept            = default;
-   Impl& operator=(Impl&&) noexcept = default;
+   Impl(Impl&&) noexcept            = delete;
+   Impl& operator=(Impl&&) noexcept = delete;
 
    void ComputeCoordinates(
       const std::shared_ptr<wsr88d::rda::ElevationScan>& radarData,
