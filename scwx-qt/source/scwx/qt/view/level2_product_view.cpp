@@ -25,8 +25,7 @@ static constexpr std::uint32_t kMaxRadialGates_ =
    common::MAX_0_5_DEGREE_RADIALS * common::MAX_DATA_MOMENT_GATES;
 static constexpr std::uint32_t kMaxCoordinates_ = kMaxRadialGates_ * 2u;
 
-static constexpr std::uint8_t kDataWordSize8_  = 8u;
-static constexpr std::uint8_t kDataWordSize16_ = 16u;
+static constexpr std::uint8_t kDataWordSize8_ = 8u;
 
 static constexpr std::size_t kVerticesPerGate_       = 6u;
 static constexpr std::size_t kVerticesPerOriginGate_ = 3u;
