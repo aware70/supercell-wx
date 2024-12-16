@@ -58,7 +58,7 @@ protected:
    void DisconnectRadarProductManager() override;
    void UpdateColorTableLut() override;
 
-   std::uint8_t ComputeEdgeValue() const;
+   [[nodiscard]] std::uint8_t ComputeEdgeValue() const;
 
 private:
    class Impl;

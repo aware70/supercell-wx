@@ -266,7 +266,7 @@ void RadarProductLayer::Render(
    // Set OpenGL blend mode for transparency
    gl.glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-   bool wireframeEnabled = context()->settings().radarWireframeEnabled_;
+   const bool wireframeEnabled = context()->settings().radarWireframeEnabled_;
    if (wireframeEnabled)
    {
       // Set polygon mode to draw wireframe

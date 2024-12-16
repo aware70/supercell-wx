@@ -33,7 +33,8 @@ public:
    }
    ~Level3RasterViewImpl() { threadPool_.join(); };
 
-   inline std::uint8_t RemapDataMoment(std::uint8_t dataMoment) const;
+   [[nodiscard]] inline std::uint8_t
+   RemapDataMoment(std::uint8_t dataMoment) const;
 
    boost::asio::thread_pool threadPool_ {1u};
 
@@ -116,9 +117,9 @@ void Level3RasterView::ComputeSweep()
 
    std::shared_ptr<manager::RadarProductManager> radarProductManager =
       radar_product_manager();
-   const bool smoothingEnabled    = smoothing_enabled();
-   p->showSmoothedRangeFolding_   = show_smoothed_range_folding();
-   bool& showSmoothedRangeFolding = p->showSmoothedRangeFolding_;
+   const bool smoothingEnabled          = smoothing_enabled();
+   p->showSmoothedRangeFolding_         = show_smoothed_range_folding();
+   const bool& showSmoothedRangeFolding = p->showSmoothedRangeFolding_;
 
    // Retrieve message from Radar Product Manager
    std::shared_ptr<wsr88d::rpg::Level3Message> message;
@@ -344,10 +345,10 @@ void Level3RasterView::ComputeSweep()
       {
          if (!smoothingEnabled)
          {
-            constexpr size_t vertexCount = 6;
+            static constexpr std::size_t vertexCount = 6;
 
             // Store data moment value
-            uint8_t dataValue = dataMomentsArray8[bin];
+            const std::uint8_t& dataValue = dataMomentsArray8[bin];
             if (dataValue < snrThreshold && dataValue != RANGE_FOLDED)
             {
                continue;

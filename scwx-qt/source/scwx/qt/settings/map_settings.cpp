@@ -157,28 +157,27 @@ std::size_t MapSettings::count() const
    return kCount_;
 }
 
-SettingsVariable<std::string>& MapSettings::map_style(std::size_t i) const
+SettingsVariable<std::string>& MapSettings::map_style(std::size_t i)
 {
    return p->map_.at(i).mapStyle_;
 }
 
-SettingsVariable<std::string>& MapSettings::radar_site(std::size_t i) const
+SettingsVariable<std::string>& MapSettings::radar_site(std::size_t i)
 {
    return p->map_.at(i).radarSite_;
 }
 
-SettingsVariable<std::string>&
-MapSettings::radar_product_group(std::size_t i) const
+SettingsVariable<std::string>& MapSettings::radar_product_group(std::size_t i)
 {
    return p->map_.at(i).radarProductGroup_;
 }
 
-SettingsVariable<std::string>& MapSettings::radar_product(std::size_t i) const
+SettingsVariable<std::string>& MapSettings::radar_product(std::size_t i)
 {
    return p->map_.at(i).radarProduct_;
 }
 
-SettingsVariable<bool>& MapSettings::smoothing_enabled(std::size_t i) const
+SettingsVariable<bool>& MapSettings::smoothing_enabled(std::size_t i)
 {
    return p->map_.at(i).smoothingEnabled_;
 }

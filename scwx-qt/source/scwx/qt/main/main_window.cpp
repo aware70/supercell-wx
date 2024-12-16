@@ -1098,12 +1098,12 @@ void MainWindowImpl::ConnectOtherSignals()
       mainWindow_,
       [this](Qt::CheckState state)
       {
-         bool smoothingEnabled = (state == Qt::CheckState::Checked);
+         const bool smoothingEnabled = (state == Qt::CheckState::Checked);
 
          auto it = std::find(maps_.cbegin(), maps_.cend(), activeMap_);
          if (it != maps_.cend())
          {
-            std::size_t i = std::distance(maps_.cbegin(), it);
+            const std::size_t i = std::distance(maps_.cbegin(), it);
             settings::MapSettings::Instance().smoothing_enabled(i).StageValue(
                smoothingEnabled);
          }

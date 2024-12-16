@@ -39,18 +39,19 @@ public:
 
    void DumpLayerList() const;
 
-   common::Level3ProductCategoryMap      GetAvailableLevel3Categories();
-   float                                 GetElevation() const;
-   std::vector<float>                    GetElevationCuts() const;
-   std::vector<std::string>              GetLevel3Products();
-   std::string                           GetMapStyle() const;
-   common::RadarProductGroup             GetRadarProductGroup() const;
-   std::string                           GetRadarProductName() const;
-   std::shared_ptr<config::RadarSite>    GetRadarSite() const;
-   bool                                  GetRadarWireframeEnabled() const;
-   std::chrono::system_clock::time_point GetSelectedTime() const;
-   bool                                  GetSmoothingEnabled() const;
-   std::uint16_t                         GetVcp() const;
+   [[nodiscard]] common::Level3ProductCategoryMap
+                                           GetAvailableLevel3Categories();
+   [[nodiscard]] float                     GetElevation() const;
+   [[nodiscard]] std::vector<float>        GetElevationCuts() const;
+   [[nodiscard]] std::vector<std::string>  GetLevel3Products();
+   [[nodiscard]] std::string               GetMapStyle() const;
+   [[nodiscard]] common::RadarProductGroup GetRadarProductGroup() const;
+   [[nodiscard]] std::string               GetRadarProductName() const;
+   [[nodiscard]] std::shared_ptr<config::RadarSite> GetRadarSite() const;
+   [[nodiscard]] bool GetRadarWireframeEnabled() const;
+   [[nodiscard]] std::chrono::system_clock::time_point GetSelectedTime() const;
+   [[nodiscard]] bool          GetSmoothingEnabled() const;
+   [[nodiscard]] std::uint16_t GetVcp() const;
 
    void SelectElevation(float elevation);
 

@@ -47,7 +47,8 @@ public:
       const std::shared_ptr<wsr88d::rpg::GenericRadialDataPacket>& radialData,
       bool smoothingEnabled);
 
-   inline std::uint8_t RemapDataMoment(std::uint8_t dataMoment) const;
+   [[nodiscard]] inline std::uint8_t
+   RemapDataMoment(std::uint8_t dataMoment) const;
 
    Level3RadialView* self_;
 
@@ -133,9 +134,9 @@ void Level3RadialView::ComputeSweep()
 
    std::shared_ptr<manager::RadarProductManager> radarProductManager =
       radar_product_manager();
-   const bool smoothingEnabled    = smoothing_enabled();
-   p->showSmoothedRangeFolding_   = show_smoothed_range_folding();
-   bool& showSmoothedRangeFolding = p->showSmoothedRangeFolding_;
+   const bool smoothingEnabled          = smoothing_enabled();
+   p->showSmoothedRangeFolding_         = show_smoothed_range_folding();
+   const bool& showSmoothedRangeFolding = p->showSmoothedRangeFolding_;
 
    // Retrieve message from Radar Product Manager
    std::shared_ptr<wsr88d::rpg::Level3Message> message;
@@ -381,7 +382,7 @@ void Level3RadialView::ComputeSweep()
          if (!smoothingEnabled)
          {
             // Store data moment value
-            uint8_t dataValue =
+            const uint8_t dataValue =
                (i < dataMomentsArray8.size()) ? dataMomentsArray8[i] : 0;
             if (dataValue < snrThreshold && dataValue != RANGE_FOLDED)
             {
@@ -470,8 +471,6 @@ void Level3RadialView::ComputeSweep()
 
             vertices[vIndex++] = coordinates[offset4];
             vertices[vIndex++] = coordinates[offset4 + 1];
-
-            vertexCount = 6;
          }
          else
          {
@@ -494,8 +493,6 @@ void Level3RadialView::ComputeSweep()
 
             vertices[vIndex++] = coordinates[offset2];
             vertices[vIndex++] = coordinates[offset2 + 1];
-
-            vertexCount = 3;
          }
       }
    }
@@ -561,44 +558,46 @@ void Level3RadialView::Impl::ComputeCoordinates(
                                     // size distance from the radar site
                                     1.0f;
 
-   std::for_each(std::execution::par_unseq,
-                 radials.begin(),
-                 radials.end(),
-                 [&](std::uint32_t radial)
-                 {
-                    float angle = radialData->start_angle(radial);
+   std::for_each(
+      std::execution::par_unseq,
+      radials.begin(),
+      radials.end(),
+      [&](std::uint32_t radial)
+      {
+         float angle = radialData->start_angle(radial);
 
-                    if (smoothingEnabled)
-                    {
-                       angle += radialData->delta_angle(radial) * 0.5f;
-                    }
+         if (smoothingEnabled)
+         {
+            static constexpr float kDeltaAngleFactor = 0.5f;
+            angle += radialData->delta_angle(radial) * kDeltaAngleFactor;
+         }
 
-                    std::for_each(std::execution::par_unseq,
-                                  gates.begin(),
-                                  gates.end(),
-                                  [&](std::uint32_t gate)
-                                  {
-                                     const std::uint32_t radialGate =
-                                        radial * common::MAX_DATA_MOMENT_GATES +
-                                        gate;
-                                     const float range =
-                                        (gate + gateRangeOffset) * gateSize;
-                                     const std::size_t offset = radialGate * 2;
+         std::for_each(
+            std::execution::par_unseq,
+            gates.begin(),
+            gates.end(),
+            [&](std::uint32_t gate)
+            {
+               const std::uint32_t radialGate =
+                  radial * common::MAX_DATA_MOMENT_GATES + gate;
+               const float range =
+                  (static_cast<float>(gate) + gateRangeOffset) * gateSize;
+               const std::size_t offset = static_cast<size_t>(radialGate) * 2;
 
-                                     double latitude;
-                                     double longitude;
+               double latitude  = 0.0;
+               double longitude = 0.0;
 
-                                     geodesic.Direct(radarLatitude,
-                                                     radarLongitude,
-                                                     angle,
-                                                     range,
-                                                     latitude,
-                                                     longitude);
+               geodesic.Direct(radarLatitude,
+                               radarLongitude,
+                               angle,
+                               range,
+                               latitude,
+                               longitude);
 
-                                     coordinates_[offset]     = latitude;
-                                     coordinates_[offset + 1] = longitude;
-                                  });
-                 });
+               coordinates_[offset]     = static_cast<float>(latitude);
+               coordinates_[offset + 1] = static_cast<float>(longitude);
+            });
+      });
    timer.stop();
    logger_->debug("Coordinates calculated in {}", timer.format(6, "%ws"));
 }

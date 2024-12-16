@@ -539,8 +539,8 @@ void SettingsDialogImpl::SetupGeneralTab()
       self_,
       [this](const QString& text)
       {
-         types::UiStyle style  = types::GetUiStyle(text.toStdString());
-         bool themeFileEnabled = style == types::UiStyle::FusionCustom;
+         const types::UiStyle style  = types::GetUiStyle(text.toStdString());
+         const bool themeFileEnabled = style == types::UiStyle::FusionCustom;
 
          self_->ui->themeFileLineEdit->setEnabled(themeFileEnabled);
          self_->ui->themeFileSelectButton->setEnabled(themeFileEnabled);

@@ -489,8 +489,8 @@ std::uint8_t Level3ProductView::ComputeEdgeValue() const
 {
    std::uint8_t edgeValue = 0;
 
-   std::shared_ptr<wsr88d::rpg::ProductDescriptionBlock> descriptionBlock =
-      p->graphicMessage_->description_block();
+   const std::shared_ptr<wsr88d::rpg::ProductDescriptionBlock>
+      descriptionBlock = p->graphicMessage_->description_block();
 
    const float offset = descriptionBlock->offset();
    const float scale  = descriptionBlock->scale();
@@ -498,11 +498,12 @@ std::uint8_t Level3ProductView::ComputeEdgeValue() const
    switch (p->category_)
    {
    case common::Level3ProductCategory::Velocity:
-      edgeValue = (scale > 0.0f) ? (-offset / scale) : -offset;
+      edgeValue = static_cast<std::uint8_t>((scale > 0.0f) ? (-offset / scale) :
+                                                             -offset);
       break;
 
    case common::Level3ProductCategory::DifferentialReflectivity:
-      edgeValue = -offset;
+      edgeValue = static_cast<std::uint8_t>(-offset);
       break;
 
    case common::Level3ProductCategory::SpectrumWidth:
@@ -512,7 +513,8 @@ std::uint8_t Level3ProductView::ComputeEdgeValue() const
 
    case common::Level3ProductCategory::CorrelationCoefficient:
       edgeValue = static_cast<std::uint8_t>(
-         std::max<std::uint16_t>(255, descriptionBlock->number_of_levels()));
+         std::max<std::uint16_t>(std::numeric_limits<std::uint8_t>::max(),
+                                 descriptionBlock->number_of_levels()));
       break;
 
    case common::Level3ProductCategory::Reflectivity:

@@ -9,8 +9,8 @@ namespace map
 
 struct MapSettings
 {
-   explicit MapSettings() {}
-   ~MapSettings() = default;
+   explicit MapSettings() = default;
+   ~MapSettings()         = default;
 
    MapSettings(const MapSettings&)            = delete;
    MapSettings& operator=(const MapSettings&) = delete;
