@@ -42,17 +42,17 @@ ProductSettings::ProductSettings(ProductSettings&&) noexcept = default;
 ProductSettings&
 ProductSettings::operator=(ProductSettings&&) noexcept = default;
 
-SettingsVariable<bool>& ProductSettings::show_smoothed_range_folding() const
+SettingsVariable<bool>& ProductSettings::show_smoothed_range_folding()
 {
    return p->showSmoothedRangeFolding_;
 }
 
-SettingsVariable<bool>& ProductSettings::sti_forecast_enabled() const
+SettingsVariable<bool>& ProductSettings::sti_forecast_enabled()
 {
    return p->stiForecastEnabled_;
 }
 
-SettingsVariable<bool>& ProductSettings::sti_past_enabled() const
+SettingsVariable<bool>& ProductSettings::sti_past_enabled()
 {
    return p->stiPastEnabled_;
 }

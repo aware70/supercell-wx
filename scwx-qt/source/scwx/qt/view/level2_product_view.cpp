@@ -782,7 +782,7 @@ void Level2ProductView::ComputeSweep()
             continue;
          }
 
-         std::size_t vertexCount =
+         const std::size_t vertexCount =
             (gate > 0) ? kVerticesPerGate_ : kVerticesPerOriginGate_;
 
          // Allow pointer arithmetic here, as bounds have already been checked
