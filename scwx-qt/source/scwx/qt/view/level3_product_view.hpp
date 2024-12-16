@@ -58,6 +58,8 @@ protected:
    void DisconnectRadarProductManager() override;
    void UpdateColorTableLut() override;
 
+   [[nodiscard]] std::uint8_t ComputeEdgeValue() const;
+
 private:
    class Impl;
    std::unique_ptr<Impl> p;

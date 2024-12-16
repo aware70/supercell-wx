@@ -9,14 +9,14 @@ uniform float uDataMomentScale;
 
 uniform bool uCFPEnabled;
 
-flat in uint dataMoment;
-flat in uint cfpMoment;
+in float dataMoment;
+in float cfpMoment;
 
 layout (location = 0) out vec4 fragColor;
 
 void main()
 {
-   float texCoord = float(dataMoment - uDataMomentOffset) / uDataMomentScale;
+   float texCoord = (dataMoment - float(uDataMomentOffset)) / uDataMomentScale;
 
    if (uCFPEnabled && cfpMoment > 8u)
    {

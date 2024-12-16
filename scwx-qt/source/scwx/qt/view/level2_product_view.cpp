@@ -25,6 +25,11 @@ static constexpr std::uint32_t kMaxRadialGates_ =
    common::MAX_0_5_DEGREE_RADIALS * common::MAX_DATA_MOMENT_GATES;
 static constexpr std::uint32_t kMaxCoordinates_ = kMaxRadialGates_ * 2u;
 
+static constexpr std::uint8_t kDataWordSize8_ = 8u;
+
+static constexpr std::size_t kVerticesPerGate_       = 6u;
+static constexpr std::size_t kVerticesPerOriginGate_ = 3u;
+
 static constexpr uint16_t RANGE_FOLDED      = 1u;
 static constexpr uint32_t VERTICES_PER_BIN  = 6u;
 static constexpr uint32_t VALUES_PER_VERTEX = 2u;
@@ -53,11 +58,10 @@ static const std::unordered_map<common::Level2Product, std::string>
                   {common::Level2Product::CorrelationCoefficient, "%"},
                   {common::Level2Product::ClutterFilterPowerRemoved, "dB"}};
 
-class Level2ProductViewImpl
+class Level2ProductView::Impl
 {
 public:
-   explicit Level2ProductViewImpl(Level2ProductView*    self,
-                                  common::Level2Product product) :
+   explicit Impl(Level2ProductView* self, common::Level2Product product) :
        self_ {self},
        product_ {product},
        selectedElevation_ {0.0f},
@@ -94,7 +98,7 @@ public:
       UpdateOtherUnits(unitSettings.other_units().GetValue());
       UpdateSpeedUnits(unitSettings.speed_units().GetValue());
    }
-   ~Level2ProductViewImpl()
+   ~Impl()
    {
       auto& unitSettings = settings::UnitSettings::Instance();
 
@@ -106,23 +110,36 @@ public:
       threadPool_.join();
    };
 
+   Impl(const Impl&)            = delete;
+   Impl& operator=(const Impl&) = delete;
+
+   Impl(Impl&&) noexcept            = delete;
+   Impl& operator=(Impl&&) noexcept = delete;
+
    void ComputeCoordinates(
-      const std::shared_ptr<wsr88d::rda::ElevationScan>& radarData);
+      const std::shared_ptr<wsr88d::rda::ElevationScan>& radarData,
+      bool                                               smoothingEnabled);
 
    void SetProduct(const std::string& productName);
    void SetProduct(common::Level2Product product);
    void UpdateOtherUnits(const std::string& name);
    void UpdateSpeedUnits(const std::string& name);
 
+   void ComputeEdgeValue();
+   template<typename T>
+   [[nodiscard]] inline T RemapDataMoment(T dataMoment) const;
+
    static bool IsRadarDataIncomplete(
       const std::shared_ptr<const wsr88d::rda::ElevationScan>& radarData);
+   static units::degrees<float> NormalizeAngle(units::degrees<float> angle);
 
    Level2ProductView* self_;
 
    boost::asio::thread_pool threadPool_ {1u};
 
    common::Level2Product      product_;
-   wsr88d::rda::DataBlockType dataBlockType_;
+   wsr88d::rda::DataBlockType dataBlockType_ {
+      wsr88d::rda::DataBlockType::Unknown};
 
    float selectedElevation_;
 
@@ -130,11 +147,17 @@ public:
    std::shared_ptr<wsr88d::rda::GenericRadarData::MomentDataBlock>
       momentDataBlock0_;
 
+   bool lastShowSmoothedRangeFolding_ {false};
+   bool lastSmoothingEnabled_ {false};
+
    std::vector<float>    coordinates_ {};
    std::vector<float>    vertices_ {};
    std::vector<uint8_t>  dataMoments8_ {};
    std::vector<uint16_t> dataMoments16_ {};
    std::vector<uint8_t>  cfpMoments_ {};
+   std::uint16_t         edgeValue_ {};
+
+   bool showSmoothedRangeFolding_ {false};
 
    float                    latitude_;
    float                    longitude_;
@@ -164,7 +187,7 @@ Level2ProductView::Level2ProductView(
    common::Level2Product                         product,
    std::shared_ptr<manager::RadarProductManager> radarProductManager) :
     RadarProductView(radarProductManager),
-    p(std::make_unique<Level2ProductViewImpl>(this, product))
+    p(std::make_unique<Impl>(this, product))
 {
    ConnectRadarProductManager();
 }
@@ -379,12 +402,12 @@ void Level2ProductView::SelectProduct(const std::string& productName)
    p->SetProduct(productName);
 }
 
-void Level2ProductViewImpl::SetProduct(const std::string& productName)
+void Level2ProductView::Impl::SetProduct(const std::string& productName)
 {
    SetProduct(common::GetLevel2Product(productName));
 }
 
-void Level2ProductViewImpl::SetProduct(common::Level2Product product)
+void Level2ProductView::Impl::SetProduct(common::Level2Product product)
 {
    product_ = product;
 
@@ -401,12 +424,12 @@ void Level2ProductViewImpl::SetProduct(common::Level2Product product)
    }
 }
 
-void Level2ProductViewImpl::UpdateOtherUnits(const std::string& name)
+void Level2ProductView::Impl::UpdateOtherUnits(const std::string& name)
 {
    otherUnits_ = types::GetOtherUnitsFromName(name);
 }
 
-void Level2ProductViewImpl::UpdateSpeedUnits(const std::string& name)
+void Level2ProductView::Impl::UpdateSpeedUnits(const std::string& name)
 {
    speedUnits_ = types::GetSpeedUnitsFromName(name);
 }
@@ -511,6 +534,9 @@ void Level2ProductView::ComputeSweep()
 
    std::shared_ptr<manager::RadarProductManager> radarProductManager =
       radar_product_manager();
+   const bool smoothingEnabled          = smoothing_enabled();
+   p->showSmoothedRangeFolding_         = show_smoothed_range_folding();
+   const bool& showSmoothedRangeFolding = p->showSmoothedRangeFolding_;
 
    std::shared_ptr<wsr88d::rda::ElevationScan> radarData;
    std::chrono::system_clock::time_point       requestedTime {selected_time()};
@@ -523,11 +549,17 @@ void Level2ProductView::ComputeSweep()
       Q_EMIT SweepNotComputed(types::NoUpdateReason::NotLoaded);
       return;
    }
-   if (radarData == p->elevationScan_)
+   if (radarData == p->elevationScan_ &&
+       smoothingEnabled == p->lastSmoothingEnabled_ &&
+       (showSmoothedRangeFolding == p->lastShowSmoothedRangeFolding_ ||
+        !smoothingEnabled))
    {
       Q_EMIT SweepNotComputed(types::NoUpdateReason::NoChange);
       return;
    }
+
+   p->lastShowSmoothedRangeFolding_ = showSmoothedRangeFolding;
+   p->lastSmoothingEnabled_         = smoothingEnabled;
 
    logger_->debug("Computing Sweep");
 
@@ -536,8 +568,7 @@ void Level2ProductView::ComputeSweep()
 
    // When there is missing data, insert another empty vertex radial at the end
    // to avoid stretching
-   const bool isRadarDataIncomplete =
-      Level2ProductViewImpl::IsRadarDataIncomplete(radarData);
+   const bool isRadarDataIncomplete = Impl::IsRadarDataIncomplete(radarData);
    if (isRadarDataIncomplete)
    {
       ++vertexRadials;
@@ -548,7 +579,7 @@ void Level2ProductView::ComputeSweep()
    vertexRadials =
       std::min<std::size_t>(vertexRadials, common::MAX_0_5_DEGREE_RADIALS);
 
-   p->ComputeCoordinates(radarData);
+   p->ComputeCoordinates(radarData, smoothingEnabled);
 
    const std::vector<float>& coordinates = p->coordinates_;
 
@@ -627,11 +658,20 @@ void Level2ProductView::ComputeSweep()
    // Start radial is always 0, as coordinates are calculated for each sweep
    constexpr std::uint16_t startRadial = 0u;
 
-   for (auto& radialPair : *radarData)
+   // For most products other than reflectivity, the edge should not go to the
+   // bottom of the color table
+   if (smoothingEnabled)
    {
+      p->ComputeEdgeValue();
+   }
+
+   for (auto it = radarData->cbegin(); it != radarData->cend(); ++it)
+   {
+      const auto&   radialPair = *it;
       std::uint16_t radial     = radialPair.first;
-      auto&         radialData = radialPair.second;
-      auto momentData = radialData->moment_data_block(p->dataBlockType_);
+      const auto&   radialData = radialPair.second;
+      const std::shared_ptr<wsr88d::rda::GenericRadarData::MomentDataBlock>
+         momentData = radialData->moment_data_block(p->dataBlockType_);
 
       if (momentData0->data_word_size() != momentData->data_word_size())
       {
@@ -653,7 +693,7 @@ void Level2ProductView::ComputeSweep()
          std::max<std::int32_t>(1, dataMomentInterval / gateSizeMeters);
 
       // Compute gate range [startGate, endGate)
-      const std::int32_t startGate =
+      std::int32_t startGate =
          (dataMomentRange - dataMomentIntervalH) / gateSizeMeters;
       const std::int32_t numberOfDataMomentGates =
          std::min<std::int32_t>(momentData->number_of_data_moment_gates(),
@@ -662,9 +702,19 @@ void Level2ProductView::ComputeSweep()
          startGate + numberOfDataMomentGates * gateSize,
          static_cast<std::int32_t>(common::MAX_DATA_MOMENT_GATES));
 
-      const std::uint8_t*  dataMomentsArray8  = nullptr;
-      const std::uint16_t* dataMomentsArray16 = nullptr;
-      const std::uint8_t*  cfpMomentsArray    = nullptr;
+      if (smoothingEnabled)
+      {
+         // If smoothing is enabled, the start gate is incremented by one, as we
+         // are skipping the radar site origin. The end gate is unaffected, as
+         // we need to draw one less data point.
+         ++startGate;
+      }
+
+      const std::uint8_t*  dataMomentsArray8      = nullptr;
+      const std::uint16_t* dataMomentsArray16     = nullptr;
+      const std::uint8_t*  nextDataMomentsArray8  = nullptr;
+      const std::uint16_t* nextDataMomentsArray16 = nullptr;
+      const std::uint8_t*  cfpMomentsArray        = nullptr;
 
       if (momentData->data_word_size() == 8)
       {
@@ -684,6 +734,45 @@ void Level2ProductView::ComputeSweep()
                ->data_moments());
       }
 
+      std::shared_ptr<wsr88d::rda::GenericRadarData::MomentDataBlock>
+                   nextMomentData              = nullptr;
+      std::int32_t numberOfNextDataMomentGates = 0;
+      if (smoothingEnabled)
+      {
+         // Smoothing requires the next radial pair as well
+         auto nextIt = std::next(it);
+         if (nextIt == radarData->cend())
+         {
+            nextIt = radarData->cbegin();
+         }
+
+         const auto& nextRadialPair = *(nextIt);
+         const auto& nextRadialData = nextRadialPair.second;
+         nextMomentData = nextRadialData->moment_data_block(p->dataBlockType_);
+
+         if (momentData->data_word_size() != nextMomentData->data_word_size())
+         {
+            // Data should be consistent between radials
+            logger_->warn("Invalid data moment size");
+            continue;
+         }
+
+         if (nextMomentData->data_word_size() == kDataWordSize8_)
+         {
+            nextDataMomentsArray8 = reinterpret_cast<const std::uint8_t*>(
+               nextMomentData->data_moments());
+         }
+         else
+         {
+            nextDataMomentsArray16 = reinterpret_cast<const std::uint16_t*>(
+               nextMomentData->data_moments());
+         }
+
+         numberOfNextDataMomentGates = std::min<std::int32_t>(
+            nextMomentData->number_of_data_moment_gates(),
+            static_cast<std::int32_t>(gates));
+      }
+
       for (std::int32_t gate = startGate, i = 0; gate + gateSize <= endGate;
            gate += gateSize, ++i)
       {
@@ -692,57 +781,172 @@ void Level2ProductView::ComputeSweep()
             continue;
          }
 
-         std::size_t vertexCount = (gate > 0) ? 6 : 3;
+         const std::size_t vertexCount =
+            (gate > 0) ? kVerticesPerGate_ : kVerticesPerOriginGate_;
+
+         // Allow pointer arithmetic here, as bounds have already been checked
+         // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 
          // Store data moment value
          if (dataMomentsArray8 != nullptr)
          {
-            std::uint8_t dataValue = dataMomentsArray8[i];
-            if (dataValue < snrThreshold && dataValue != RANGE_FOLDED)
+            if (!smoothingEnabled)
             {
-               continue;
-            }
-
-            for (std::size_t m = 0; m < vertexCount; m++)
-            {
-               dataMoments8[mIndex++] = dataMomentsArray8[i];
-
-               if (cfpMomentsArray != nullptr)
+               const std::uint8_t& dataValue = dataMomentsArray8[i];
+               if (dataValue < snrThreshold && dataValue != RANGE_FOLDED)
                {
-                  cfpMoments[mIndex - 1] = cfpMomentsArray[i];
+                  continue;
                }
+
+               for (std::size_t m = 0; m < vertexCount; m++)
+               {
+                  dataMoments8[mIndex++] = dataValue;
+
+                  if (cfpMomentsArray != nullptr)
+                  {
+                     cfpMoments[mIndex - 1] = cfpMomentsArray[i];
+                  }
+               }
+            }
+            else if (gate > 0)
+            {
+               // Validate indices are all in range
+               if (i + 1 >= numberOfDataMomentGates ||
+                   i + 1 >= numberOfNextDataMomentGates)
+               {
+                  continue;
+               }
+
+               const std::uint8_t& dm1 = dataMomentsArray8[i];
+               const std::uint8_t& dm2 = dataMomentsArray8[i + 1];
+               const std::uint8_t& dm3 = nextDataMomentsArray8[i];
+               const std::uint8_t& dm4 = nextDataMomentsArray8[i + 1];
+
+               if ((!showSmoothedRangeFolding && //
+                    (dm1 < snrThreshold || dm1 == RANGE_FOLDED) &&
+                    (dm2 < snrThreshold || dm2 == RANGE_FOLDED) &&
+                    (dm3 < snrThreshold || dm3 == RANGE_FOLDED) &&
+                    (dm4 < snrThreshold || dm4 == RANGE_FOLDED)) ||
+                   (showSmoothedRangeFolding && //
+                    dm1 < snrThreshold && dm1 != RANGE_FOLDED &&
+                    dm2 < snrThreshold && dm2 != RANGE_FOLDED &&
+                    dm3 < snrThreshold && dm3 != RANGE_FOLDED &&
+                    dm4 < snrThreshold && dm4 != RANGE_FOLDED))
+               {
+                  // Skip only if all data moments are hidden
+                  continue;
+               }
+
+               // The order must match the store vertices section below
+               dataMoments8[mIndex++] = p->RemapDataMoment(dm1);
+               dataMoments8[mIndex++] = p->RemapDataMoment(dm2);
+               dataMoments8[mIndex++] = p->RemapDataMoment(dm4);
+               dataMoments8[mIndex++] = p->RemapDataMoment(dm1);
+               dataMoments8[mIndex++] = p->RemapDataMoment(dm3);
+               dataMoments8[mIndex++] = p->RemapDataMoment(dm4);
+
+               // cfpMoments is unused, so not populated here
+            }
+            else
+            {
+               // If smoothing is enabled, gate should never start at zero
+               // (radar site origin)
+               logger_->error(
+                  "Smoothing enabled, gate should not start at zero");
+               continue;
             }
          }
          else
          {
-            std::uint16_t dataValue = dataMomentsArray16[i];
-            if (dataValue < snrThreshold && dataValue != RANGE_FOLDED)
+            if (!smoothingEnabled)
             {
+               const std::uint16_t& dataValue = dataMomentsArray16[i];
+               if (dataValue < snrThreshold && dataValue != RANGE_FOLDED)
+               {
+                  continue;
+               }
+
+               for (std::size_t m = 0; m < vertexCount; m++)
+               {
+                  dataMoments16[mIndex++] = dataValue;
+               }
+            }
+            else if (gate > 0)
+            {
+               // Validate indices are all in range
+               if (i + 1 >= numberOfDataMomentGates ||
+                   i + 1 >= numberOfNextDataMomentGates)
+               {
+                  continue;
+               }
+
+               const std::uint16_t& dm1 = dataMomentsArray16[i];
+               const std::uint16_t& dm2 = dataMomentsArray16[i + 1];
+               const std::uint16_t& dm3 = nextDataMomentsArray16[i];
+               const std::uint16_t& dm4 = nextDataMomentsArray16[i + 1];
+
+               if ((!showSmoothedRangeFolding && //
+                    (dm1 < snrThreshold || dm1 == RANGE_FOLDED) &&
+                    (dm2 < snrThreshold || dm2 == RANGE_FOLDED) &&
+                    (dm3 < snrThreshold || dm3 == RANGE_FOLDED) &&
+                    (dm4 < snrThreshold || dm4 == RANGE_FOLDED)) ||
+                   (showSmoothedRangeFolding && //
+                    dm1 < snrThreshold && dm1 != RANGE_FOLDED &&
+                    dm2 < snrThreshold && dm2 != RANGE_FOLDED &&
+                    dm3 < snrThreshold && dm3 != RANGE_FOLDED &&
+                    dm4 < snrThreshold && dm4 != RANGE_FOLDED))
+               {
+                  // Skip only if all data moments are hidden
+                  continue;
+               }
+
+               // The order must match the store vertices section below
+               dataMoments16[mIndex++] = p->RemapDataMoment(dm1);
+               dataMoments16[mIndex++] = p->RemapDataMoment(dm2);
+               dataMoments16[mIndex++] = p->RemapDataMoment(dm4);
+               dataMoments16[mIndex++] = p->RemapDataMoment(dm1);
+               dataMoments16[mIndex++] = p->RemapDataMoment(dm3);
+               dataMoments16[mIndex++] = p->RemapDataMoment(dm4);
+
+               // cfpMoments is unused, so not populated here
+            }
+            else
+            {
+               // If smoothing is enabled, gate should never start at zero
+               // (radar site origin)
                continue;
             }
-
-            for (std::size_t m = 0; m < vertexCount; m++)
-            {
-               dataMoments16[mIndex++] = dataMomentsArray16[i];
-            }
          }
+
+         // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 
          // Store vertices
          if (gate > 0)
          {
+            // Draw two triangles per gate
+            //
+            // 2 +---+ 4
+            //   |  /|
+            //   | / |
+            //   |/  |
+            // 1 +---+ 3
+
             const std::uint16_t baseCoord = gate - 1;
 
-            std::size_t offset1 = ((startRadial + radial) % vertexRadials *
-                                      common::MAX_DATA_MOMENT_GATES +
-                                   baseCoord) *
-                                  2;
-            std::size_t offset2 = offset1 + gateSize * 2;
-            std::size_t offset3 =
+            const std::size_t offset1 =
+               ((startRadial + radial) % vertexRadials *
+                   common::MAX_DATA_MOMENT_GATES +
+                baseCoord) *
+               2;
+            const std::size_t offset2 =
+               offset1 + static_cast<std::size_t>(gateSize) * 2;
+            const std::size_t offset3 =
                (((startRadial + radial + 1) % vertexRadials) *
                    common::MAX_DATA_MOMENT_GATES +
                 baseCoord) *
                2;
-            std::size_t offset4 = offset3 + gateSize * 2;
+            const std::size_t offset4 =
+               offset3 + static_cast<std::size_t>(gateSize) * 2;
 
             vertices[vIndex++] = coordinates[offset1];
             vertices[vIndex++] = coordinates[offset1 + 1];
@@ -750,19 +954,17 @@ void Level2ProductView::ComputeSweep()
             vertices[vIndex++] = coordinates[offset2];
             vertices[vIndex++] = coordinates[offset2 + 1];
 
-            vertices[vIndex++] = coordinates[offset3];
-            vertices[vIndex++] = coordinates[offset3 + 1];
+            vertices[vIndex++] = coordinates[offset4];
+            vertices[vIndex++] = coordinates[offset4 + 1];
+
+            vertices[vIndex++] = coordinates[offset1];
+            vertices[vIndex++] = coordinates[offset1 + 1];
 
             vertices[vIndex++] = coordinates[offset3];
             vertices[vIndex++] = coordinates[offset3 + 1];
 
             vertices[vIndex++] = coordinates[offset4];
             vertices[vIndex++] = coordinates[offset4 + 1];
-
-            vertices[vIndex++] = coordinates[offset2];
-            vertices[vIndex++] = coordinates[offset2 + 1];
-
-            vertexCount = 6;
          }
          else
          {
@@ -786,8 +988,6 @@ void Level2ProductView::ComputeSweep()
 
             vertices[vIndex++] = coordinates[offset2];
             vertices[vIndex++] = coordinates[offset2 + 1];
-
-            vertexCount = 3;
          }
       }
    }
@@ -819,8 +1019,50 @@ void Level2ProductView::ComputeSweep()
    Q_EMIT SweepComputed();
 }
 
-void Level2ProductViewImpl::ComputeCoordinates(
-   const std::shared_ptr<wsr88d::rda::ElevationScan>& radarData)
+void Level2ProductView::Impl::ComputeEdgeValue()
+{
+   const float offset = momentDataBlock0_->offset();
+
+   switch (dataBlockType_)
+   {
+   case wsr88d::rda::DataBlockType::MomentVel:
+   case wsr88d::rda::DataBlockType::MomentZdr:
+      edgeValue_ = static_cast<std::uint16_t>(offset);
+      break;
+
+   case wsr88d::rda::DataBlockType::MomentSw:
+   case wsr88d::rda::DataBlockType::MomentPhi:
+      edgeValue_ = 2;
+      break;
+
+   case wsr88d::rda::DataBlockType::MomentRho:
+      edgeValue_ = std::numeric_limits<std::uint8_t>::max();
+      break;
+
+   case wsr88d::rda::DataBlockType::MomentRef:
+   default:
+      edgeValue_ = 0;
+      break;
+   }
+}
+
+template<typename T>
+T Level2ProductView::Impl::RemapDataMoment(T dataMoment) const
+{
+   if (dataMoment != 0 &&
+       (dataMoment != RANGE_FOLDED || showSmoothedRangeFolding_))
+   {
+      return dataMoment;
+   }
+   else
+   {
+      return edgeValue_;
+   }
+}
+
+void Level2ProductView::Impl::ComputeCoordinates(
+   const std::shared_ptr<wsr88d::rda::ElevationScan>& radarData,
+   bool                                               smoothingEnabled)
 {
    logger_->debug("ComputeCoordinates()");
 
@@ -860,6 +1102,14 @@ void Level2ProductViewImpl::ComputeCoordinates(
    auto radials = boost::irange<std::uint32_t>(0u, numRadials);
    auto gates   = boost::irange<std::uint32_t>(0u, numRangeBins);
 
+   const float gateRangeOffset = (smoothingEnabled) ?
+                                    // Center of the first gate is half the gate
+                                    // size distance from the radar site
+                                    0.5f :
+                                    // Far end of the first gate is the gate
+                                    // size distance from the radar site
+                                    1.0f;
+
    std::for_each(
       std::execution::par_unseq,
       radials.begin(),
@@ -869,7 +1119,7 @@ void Level2ProductViewImpl::ComputeCoordinates(
          units::degrees<float> angle {};
 
          auto radialData = radarData->find(radial);
-         if (radialData != radarData->cend())
+         if (radialData != radarData->cend() && !smoothingEnabled)
          {
             angle = radialData->second->azimuth_angle();
          }
@@ -880,19 +1130,60 @@ void Level2ProductViewImpl::ComputeCoordinates(
             auto prevRadial2 = radarData->find(
                (radial >= 2) ? radial - 2 : numRadials - (2 - radial));
 
-            if (prevRadial1 != radarData->cend() &&
-                prevRadial2 != radarData->cend())
+            if (radialData != radarData->cend() &&
+                prevRadial1 != radarData->cend() && smoothingEnabled)
+            {
+               const units::degrees<float> currentAngle =
+                  radialData->second->azimuth_angle();
+               const units::degrees<float> prevAngle =
+                  prevRadial1->second->azimuth_angle();
+
+               // Calculate delta angle
+               const units::degrees<float> deltaAngle =
+                  NormalizeAngle(currentAngle - prevAngle);
+
+               // Delta scale is half the delta angle to reach the center of the
+               // bin, because smoothing is enabled
+               constexpr float deltaScale = 0.5f;
+
+               angle = currentAngle + deltaAngle * deltaScale;
+            }
+            else if (radialData != radarData->cend() && smoothingEnabled)
+            {
+               const units::degrees<float> currentAngle =
+                  radialData->second->azimuth_angle();
+
+               // Assume a half degree delta if there aren't enough angles
+               // to determine a delta angle
+               constexpr units::degrees<float> deltaAngle {0.5f};
+
+               // Delta scale is half the delta angle to reach the center of the
+               // bin, because smoothing is enabled
+               constexpr float deltaScale = 0.5f;
+
+               angle = currentAngle + deltaAngle * deltaScale;
+            }
+            else if (prevRadial1 != radarData->cend() &&
+                     prevRadial2 != radarData->cend())
             {
                const units::degrees<float> prevAngle1 =
                   prevRadial1->second->azimuth_angle();
                const units::degrees<float> prevAngle2 =
                   prevRadial2->second->azimuth_angle();
 
-               // No wrapping required since angle is only used for geodesic
-               // calculation
-               const units::degrees<float> deltaAngle = prevAngle1 - prevAngle2;
+               // Calculate delta angle
+               const units::degrees<float> deltaAngle =
+                  NormalizeAngle(prevAngle1 - prevAngle2);
 
-               angle = prevAngle1 + deltaAngle;
+               const float deltaScale =
+                  (smoothingEnabled) ?
+                     // Delta scale is 1.5x the delta angle to reach the center
+                     // of the next bin, because smoothing is enabled
+                     1.5f :
+                     // Delta scale is 1.0x the delta angle
+                     1.0f;
+
+               angle = prevAngle1 + deltaAngle * deltaScale;
             }
             else if (prevRadial1 != radarData->cend())
             {
@@ -903,7 +1194,15 @@ void Level2ProductViewImpl::ComputeCoordinates(
                // to determine a delta angle
                constexpr units::degrees<float> deltaAngle {0.5f};
 
-               angle = prevAngle1 + deltaAngle;
+               const float deltaScale =
+                  (smoothingEnabled) ?
+                     // Delta scale is 1.5x the delta angle to reach the center
+                     // of the next bin, because smoothing is enabled
+                     1.5f :
+                     // Delta scale is 1.0x the delta angle
+                     1.0f;
+
+               angle = prevAngle1 + deltaAngle * deltaScale;
             }
             else
             {
@@ -912,35 +1211,38 @@ void Level2ProductViewImpl::ComputeCoordinates(
             }
          }
 
-         std::for_each(std::execution::par_unseq,
-                       gates.begin(),
-                       gates.end(),
-                       [&](std::uint32_t gate)
-                       {
-                          const std::uint32_t radialGate =
-                             radial * common::MAX_DATA_MOMENT_GATES + gate;
-                          const float       range  = (gate + 1) * gateSize;
-                          const std::size_t offset = radialGate * 2;
+         std::for_each(
+            std::execution::par_unseq,
+            gates.begin(),
+            gates.end(),
+            [&](std::uint32_t gate)
+            {
+               const std::uint32_t radialGate =
+                  radial * common::MAX_DATA_MOMENT_GATES + gate;
+               const float range =
+                  (static_cast<float>(gate) + gateRangeOffset) * gateSize;
+               const std::size_t offset =
+                  static_cast<std::size_t>(radialGate) * 2;
 
-                          double latitude;
-                          double longitude;
+               double latitude  = 0.0;
+               double longitude = 0.0;
 
-                          geodesic.Direct(radarLatitude,
-                                          radarLongitude,
-                                          angle.value(),
-                                          range,
-                                          latitude,
-                                          longitude);
+               geodesic.Direct(radarLatitude,
+                               radarLongitude,
+                               angle.value(),
+                               range,
+                               latitude,
+                               longitude);
 
-                          coordinates_[offset]     = latitude;
-                          coordinates_[offset + 1] = longitude;
-                       });
+               coordinates_[offset]     = static_cast<float>(latitude);
+               coordinates_[offset + 1] = static_cast<float>(longitude);
+            });
       });
    timer.stop();
    logger_->debug("Coordinates calculated in {}", timer.format(6, "%ws"));
 }
 
-bool Level2ProductViewImpl::IsRadarDataIncomplete(
+bool Level2ProductView::Impl::IsRadarDataIncomplete(
    const std::shared_ptr<const wsr88d::rda::ElevationScan>& radarData)
 {
    // Assume the data is incomplete when the delta between the first and last
@@ -955,6 +1257,25 @@ bool Level2ProductViewImpl::IsRadarDataIncomplete(
       common::GetAngleDelta(firstAngle, lastAngle);
 
    return angleDelta > kIncompleteDataAngleThreshold_;
+}
+
+units::degrees<float>
+Level2ProductView::Impl::NormalizeAngle(units::degrees<float> angle)
+{
+   constexpr auto angleLimit = units::degrees<float> {180.0f};
+   constexpr auto fullAngle  = units::degrees<float> {360.0f};
+
+   // Normalize angle to [-180, 180)
+   while (angle < -angleLimit)
+   {
+      angle += fullAngle;
+   }
+   while (angle >= angleLimit)
+   {
+      angle -= fullAngle;
+   }
+
+   return angle;
 }
 
 std::optional<std::uint16_t>
@@ -1003,7 +1324,7 @@ Level2ProductView::GetBinLevel(const common::Coordinate& coordinate) const
       static_cast<std::uint16_t>(radarData->crbegin()->first + 1);
 
    // Add an extra radial when incomplete data exists
-   if (Level2ProductViewImpl::IsRadarDataIncomplete(radarData))
+   if (Impl::IsRadarDataIncomplete(radarData))
    {
       ++numRadials;
    }

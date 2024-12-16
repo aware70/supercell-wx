@@ -41,11 +41,12 @@ public:
     */
    static void DumpRecords();
 
-   const std::vector<float>& coordinates(common::RadialSize radialSize) const;
-   const scwx::util::time_zone*       default_time_zone() const;
-   float                              gate_size() const;
-   std::string                        radar_id() const;
-   std::shared_ptr<config::RadarSite> radar_site() const;
+   [[nodiscard]] const std::vector<float>&
+   coordinates(common::RadialSize radialSize, bool smoothingEnabled) const;
+   [[nodiscard]] const scwx::util::time_zone*       default_time_zone() const;
+   [[nodiscard]] float                              gate_size() const;
+   [[nodiscard]] std::string                        radar_id() const;
+   [[nodiscard]] std::shared_ptr<config::RadarSite> radar_site() const;
 
    void Initialize();
 

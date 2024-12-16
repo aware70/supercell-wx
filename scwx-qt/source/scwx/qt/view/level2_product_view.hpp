@@ -15,8 +15,6 @@ namespace qt
 namespace view
 {
 
-class Level2ProductViewImpl;
-
 class Level2ProductView : public RadarProductView
 {
    Q_OBJECT
@@ -73,7 +71,8 @@ protected slots:
    void ComputeSweep() override;
 
 private:
-   std::unique_ptr<Level2ProductViewImpl> p;
+   class Impl;
+   std::unique_ptr<Impl> p;
 };
 
 } // namespace view

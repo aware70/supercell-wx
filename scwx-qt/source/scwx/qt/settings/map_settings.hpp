@@ -26,10 +26,11 @@ public:
    MapSettings& operator=(MapSettings&&) noexcept;
 
    std::size_t                    count() const;
-   SettingsVariable<std::string>& map_style(std::size_t i) const;
-   SettingsVariable<std::string>& radar_site(std::size_t i) const;
-   SettingsVariable<std::string>& radar_product_group(std::size_t i) const;
-   SettingsVariable<std::string>& radar_product(std::size_t i) const;
+   SettingsVariable<std::string>& map_style(std::size_t i);
+   SettingsVariable<std::string>& radar_site(std::size_t i);
+   SettingsVariable<std::string>& radar_product_group(std::size_t i);
+   SettingsVariable<std::string>& radar_product(std::size_t i);
+   SettingsVariable<bool>&        smoothing_enabled(std::size_t i);
 
    bool Shutdown();
 

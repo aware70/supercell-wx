@@ -44,7 +44,11 @@ public:
    ~Impl() { threadPool_.join(); };
 
    void ComputeCoordinates(
-      const std::shared_ptr<wsr88d::rpg::GenericRadialDataPacket>& radialData);
+      const std::shared_ptr<wsr88d::rpg::GenericRadialDataPacket>& radialData,
+      bool smoothingEnabled);
+
+   [[nodiscard]] inline std::uint8_t
+   RemapDataMoment(std::uint8_t dataMoment) const;
 
    Level3RadialView* self_;
 
@@ -53,8 +57,13 @@ public:
    std::vector<float>        coordinates_ {};
    std::vector<float>        vertices_ {};
    std::vector<std::uint8_t> dataMoments8_ {};
+   std::uint8_t              edgeValue_ {};
+
+   bool showSmoothedRangeFolding_ {false};
 
    std::shared_ptr<wsr88d::rpg::GenericRadialDataPacket> lastRadialData_ {};
+   bool lastShowSmoothedRangeFolding_ {false};
+   bool lastSmoothingEnabled_ {false};
 
    float         latitude_;
    float         longitude_;
@@ -125,6 +134,9 @@ void Level3RadialView::ComputeSweep()
 
    std::shared_ptr<manager::RadarProductManager> radarProductManager =
       radar_product_manager();
+   const bool smoothingEnabled          = smoothing_enabled();
+   p->showSmoothedRangeFolding_         = show_smoothed_range_folding();
+   const bool& showSmoothedRangeFolding = p->showSmoothedRangeFolding_;
 
    // Retrieve message from Radar Product Manager
    std::shared_ptr<wsr88d::rpg::Level3Message> message;
@@ -155,13 +167,19 @@ void Level3RadialView::ComputeSweep()
       Q_EMIT SweepNotComputed(types::NoUpdateReason::InvalidData);
       return;
    }
-   else if (gpm == graphic_product_message())
+   else if (gpm == graphic_product_message() &&
+            smoothingEnabled == p->lastSmoothingEnabled_ &&
+            (showSmoothedRangeFolding == p->lastShowSmoothedRangeFolding_ ||
+             !smoothingEnabled))
    {
       // Skip if this is the message we previously processed
       Q_EMIT SweepNotComputed(types::NoUpdateReason::NoChange);
       return;
    }
    set_graphic_product_message(gpm);
+
+   p->lastShowSmoothedRangeFolding_ = showSmoothedRangeFolding;
+   p->lastSmoothingEnabled_         = smoothingEnabled;
 
    // A message with radial data should have a Product Description Block and
    // Product Symbology Block
@@ -267,11 +285,11 @@ void Level3RadialView::ComputeSweep()
    const std::vector<float>& coordinates =
       (radialSize == common::RadialSize::NonStandard) ?
          p->coordinates_ :
-         radarProductManager->coordinates(radialSize);
+         radarProductManager->coordinates(radialSize, smoothingEnabled);
 
    // There should be a positive number of range bins in radial data
-   const uint16_t gates = radialData->number_of_range_bins();
-   if (gates < 1)
+   const uint16_t numberOfDataMomentGates = radialData->number_of_range_bins();
+   if (numberOfDataMomentGates < 1)
    {
       logger_->warn("No range bins in radial data");
       Q_EMIT SweepNotComputed(types::NoUpdateReason::InvalidData);
@@ -293,13 +311,14 @@ void Level3RadialView::ComputeSweep()
    std::vector<float>& vertices = p->vertices_;
    size_t              vIndex   = 0;
    vertices.clear();
-   vertices.resize(radials * gates * VERTICES_PER_BIN * VALUES_PER_VERTEX);
+   vertices.resize(radials * numberOfDataMomentGates * VERTICES_PER_BIN *
+                   VALUES_PER_VERTEX);
 
    // Setup data moment vector
    std::vector<uint8_t>& dataMoments8 = p->dataMoments8_;
    size_t                mIndex       = 0;
 
-   dataMoments8.resize(radials * gates * VERTICES_PER_BIN);
+   dataMoments8.resize(radials * numberOfDataMomentGates * VERTICES_PER_BIN);
 
    // Compute threshold at which to display an individual bin
    const uint16_t snrThreshold = descriptionBlock->threshold();
@@ -308,7 +327,7 @@ void Level3RadialView::ComputeSweep()
    std::uint16_t startRadial;
    if (radialSize == common::RadialSize::NonStandard)
    {
-      p->ComputeCoordinates(radialData);
+      p->ComputeCoordinates(radialData, smoothingEnabled);
       startRadial = 0;
    }
    else
@@ -318,40 +337,105 @@ void Level3RadialView::ComputeSweep()
       startRadial = std::lroundf(startAngle * radialMultiplier);
    }
 
-   for (uint16_t radial = 0; radial < radialData->number_of_radials(); radial++)
+   // Compute gate interval
+   const std::uint16_t dataMomentInterval =
+      descriptionBlock->x_resolution_raw();
+
+   // Compute gate size (number of base gates per bin)
+   const std::uint16_t gateSize = std::max<std::uint16_t>(
+      1,
+      dataMomentInterval /
+         static_cast<std::uint16_t>(radarProductManager->gate_size()));
+
+   // Compute gate range [startGate, endGate)
+   std::uint16_t       startGate = 0;
+   const std::uint16_t endGate =
+      std::min<std::uint16_t>(startGate + numberOfDataMomentGates * gateSize,
+                              common::MAX_DATA_MOMENT_GATES);
+
+   if (smoothingEnabled)
    {
-      const auto dataMomentsArray8 = radialData->level(radial);
+      // If smoothing is enabled, the start gate is incremented by one, as we
+      // are skipping the radar site origin. The end gate is unaffected, as
+      // we need to draw one less data point.
+      ++startGate;
 
-      // Compute gate interval
-      const uint16_t dataMomentInterval = descriptionBlock->x_resolution_raw();
+      // For most products other than reflectivity, the edge should not go to
+      // the bottom of the color table
+      p->edgeValue_ = ComputeEdgeValue();
+   }
 
-      // Compute gate size (number of base gates per bin)
-      const uint16_t gateSize = std::max<uint16_t>(
-         1,
-         dataMomentInterval /
-            static_cast<uint16_t>(radarProductManager->gate_size()));
+   for (std::uint16_t radial = 0; radial < radialData->number_of_radials();
+        ++radial)
+   {
+      const auto& dataMomentsArray8 = radialData->level(radial);
 
-      // Compute gate range [startGate, endGate)
-      const uint16_t startGate = 0;
-      const uint16_t endGate   = std::min<uint16_t>(
-         startGate + gates * gateSize, common::MAX_DATA_MOMENT_GATES);
+      const std::uint16_t nextRadial =
+         (radial == radialData->number_of_radials() - 1) ? 0 : radial + 1;
+      const auto& nextDataMomentsArray8 = radialData->level(nextRadial);
 
-      for (uint16_t gate = startGate, i = 0; gate + gateSize <= endGate;
+      for (std::uint16_t gate = startGate, i = 0; gate + gateSize <= endGate;
            gate += gateSize, ++i)
       {
          size_t vertexCount = (gate > 0) ? 6 : 3;
 
-         // Store data moment value
-         uint8_t dataValue =
-            (i < dataMomentsArray8.size()) ? dataMomentsArray8[i] : 0;
-         if (dataValue < snrThreshold && dataValue != RANGE_FOLDED)
+         if (!smoothingEnabled)
          {
-            continue;
-         }
+            // Store data moment value
+            const uint8_t dataValue =
+               (i < dataMomentsArray8.size()) ? dataMomentsArray8[i] : 0;
+            if (dataValue < snrThreshold && dataValue != RANGE_FOLDED)
+            {
+               continue;
+            }
 
-         for (size_t m = 0; m < vertexCount; m++)
+            for (size_t m = 0; m < vertexCount; m++)
+            {
+               dataMoments8[mIndex++] = dataValue;
+            }
+         }
+         else if (gate > 0)
          {
-            dataMoments8[mIndex++] = dataValue;
+            // Validate indices are all in range
+            if (i + 1 >= numberOfDataMomentGates)
+            {
+               continue;
+            }
+
+            const std::uint8_t& dm1 = dataMomentsArray8[i];
+            const std::uint8_t& dm2 = dataMomentsArray8[i + 1];
+            const std::uint8_t& dm3 = nextDataMomentsArray8[i];
+            const std::uint8_t& dm4 = nextDataMomentsArray8[i + 1];
+
+            if ((!showSmoothedRangeFolding && //
+                 (dm1 < snrThreshold || dm1 == RANGE_FOLDED) &&
+                 (dm2 < snrThreshold || dm2 == RANGE_FOLDED) &&
+                 (dm3 < snrThreshold || dm3 == RANGE_FOLDED) &&
+                 (dm4 < snrThreshold || dm4 == RANGE_FOLDED)) ||
+                (showSmoothedRangeFolding && //
+                 dm1 < snrThreshold && dm1 != RANGE_FOLDED &&
+                 dm2 < snrThreshold && dm2 != RANGE_FOLDED &&
+                 dm3 < snrThreshold && dm3 != RANGE_FOLDED &&
+                 dm4 < snrThreshold && dm4 != RANGE_FOLDED))
+            {
+               // Skip only if all data moments are hidden
+               continue;
+            }
+
+            // The order must match the store vertices section below
+            dataMoments8[mIndex++] = p->RemapDataMoment(dm1);
+            dataMoments8[mIndex++] = p->RemapDataMoment(dm2);
+            dataMoments8[mIndex++] = p->RemapDataMoment(dm4);
+            dataMoments8[mIndex++] = p->RemapDataMoment(dm1);
+            dataMoments8[mIndex++] = p->RemapDataMoment(dm3);
+            dataMoments8[mIndex++] = p->RemapDataMoment(dm4);
+         }
+         else
+         {
+            // If smoothing is enabled, gate should never start at zero
+            // (radar site origin)
+            logger_->error("Smoothing enabled, gate should not start at zero");
+            continue;
          }
 
          // Store vertices
@@ -376,19 +460,17 @@ void Level3RadialView::ComputeSweep()
             vertices[vIndex++] = coordinates[offset2];
             vertices[vIndex++] = coordinates[offset2 + 1];
 
-            vertices[vIndex++] = coordinates[offset3];
-            vertices[vIndex++] = coordinates[offset3 + 1];
+            vertices[vIndex++] = coordinates[offset4];
+            vertices[vIndex++] = coordinates[offset4 + 1];
+
+            vertices[vIndex++] = coordinates[offset1];
+            vertices[vIndex++] = coordinates[offset1 + 1];
 
             vertices[vIndex++] = coordinates[offset3];
             vertices[vIndex++] = coordinates[offset3 + 1];
 
             vertices[vIndex++] = coordinates[offset4];
             vertices[vIndex++] = coordinates[offset4 + 1];
-
-            vertices[vIndex++] = coordinates[offset2];
-            vertices[vIndex++] = coordinates[offset2 + 1];
-
-            vertexCount = 6;
          }
          else
          {
@@ -411,8 +493,6 @@ void Level3RadialView::ComputeSweep()
 
             vertices[vIndex++] = coordinates[offset2];
             vertices[vIndex++] = coordinates[offset2 + 1];
-
-            vertexCount = 3;
          }
       }
    }
@@ -430,8 +510,23 @@ void Level3RadialView::ComputeSweep()
    Q_EMIT SweepComputed();
 }
 
+std::uint8_t
+Level3RadialView::Impl::RemapDataMoment(std::uint8_t dataMoment) const
+{
+   if (dataMoment != 0 &&
+       (dataMoment != RANGE_FOLDED || showSmoothedRangeFolding_))
+   {
+      return dataMoment;
+   }
+   else
+   {
+      return edgeValue_;
+   }
+}
+
 void Level3RadialView::Impl::ComputeCoordinates(
-   const std::shared_ptr<wsr88d::rpg::GenericRadialDataPacket>& radialData)
+   const std::shared_ptr<wsr88d::rpg::GenericRadialDataPacket>& radialData,
+   bool smoothingEnabled)
 {
    logger_->debug("ComputeCoordinates()");
 
@@ -455,38 +550,54 @@ void Level3RadialView::Impl::ComputeCoordinates(
    auto radials = boost::irange<std::uint32_t>(0u, numRadials);
    auto gates   = boost::irange<std::uint32_t>(0u, numRangeBins);
 
-   std::for_each(std::execution::par_unseq,
-                 radials.begin(),
-                 radials.end(),
-                 [&](std::uint32_t radial)
-                 {
-                    const float angle = radialData->start_angle(radial);
+   const float gateRangeOffset = (smoothingEnabled) ?
+                                    // Center of the first gate is half the gate
+                                    // size distance from the radar site
+                                    0.5f :
+                                    // Far end of the first gate is the gate
+                                    // size distance from the radar site
+                                    1.0f;
 
-                    std::for_each(std::execution::par_unseq,
-                                  gates.begin(),
-                                  gates.end(),
-                                  [&](std::uint32_t gate)
-                                  {
-                                     const std::uint32_t radialGate =
-                                        radial * common::MAX_DATA_MOMENT_GATES +
-                                        gate;
-                                     const float range = (gate + 1) * gateSize;
-                                     const std::size_t offset = radialGate * 2;
+   std::for_each(
+      std::execution::par_unseq,
+      radials.begin(),
+      radials.end(),
+      [&](std::uint32_t radial)
+      {
+         float angle = radialData->start_angle(radial);
 
-                                     double latitude;
-                                     double longitude;
+         if (smoothingEnabled)
+         {
+            static constexpr float kDeltaAngleFactor = 0.5f;
+            angle += radialData->delta_angle(radial) * kDeltaAngleFactor;
+         }
 
-                                     geodesic.Direct(radarLatitude,
-                                                     radarLongitude,
-                                                     angle,
-                                                     range,
-                                                     latitude,
-                                                     longitude);
+         std::for_each(
+            std::execution::par_unseq,
+            gates.begin(),
+            gates.end(),
+            [&](std::uint32_t gate)
+            {
+               const std::uint32_t radialGate =
+                  radial * common::MAX_DATA_MOMENT_GATES + gate;
+               const float range =
+                  (static_cast<float>(gate) + gateRangeOffset) * gateSize;
+               const std::size_t offset = static_cast<size_t>(radialGate) * 2;
 
-                                     coordinates_[offset]     = latitude;
-                                     coordinates_[offset + 1] = longitude;
-                                  });
-                 });
+               double latitude  = 0.0;
+               double longitude = 0.0;
+
+               geodesic.Direct(radarLatitude,
+                               radarLongitude,
+                               angle,
+                               range,
+                               latitude,
+                               longitude);
+
+               coordinates_[offset]     = static_cast<float>(latitude);
+               coordinates_[offset + 1] = static_cast<float>(longitude);
+            });
+      });
    timer.stop();
    logger_->debug("Coordinates calculated in {}", timer.format(6, "%ws"));
 }

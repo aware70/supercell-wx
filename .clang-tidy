@@ -6,6 +6,7 @@ Checks:
   - 'misc-*'
   - 'modernize-*'
   - 'performance-*'
+  - '-cppcoreguidelines-pro-type-reinterpret-cast'
   - '-misc-include-cleaner'
   - '-misc-non-private-member-variables-in-classes'
   - '-modernize-use-trailing-return-type'

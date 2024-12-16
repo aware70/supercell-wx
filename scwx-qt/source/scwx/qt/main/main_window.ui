@@ -97,6 +97,8 @@
     <addaction name="separator"/>
     <addaction name="actionDumpLayerList"/>
     <addaction name="actionDumpRadarProductRecords"/>
+    <addaction name="separator"/>
+    <addaction name="actionRadarWireframe"/>
    </widget>
    <widget class="QMenu" name="menuTools">
     <property name="title">
@@ -153,8 +155,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>205</width>
-          <height>701</height>
+          <width>190</width>
+          <height>680</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_6">
@@ -330,6 +332,13 @@
              <widget class="QComboBox" name="mapStyleComboBox"/>
             </item>
             <item>
+             <widget class="QCheckBox" name="smoothRadarDataCheckBox">
+              <property name="text">
+               <string>Smooth Radar Data</string>
+              </property>
+             </widget>
+            </item>
+            <item>
              <widget class="QCheckBox" name="trackLocationCheckBox">
               <property name="text">
                <string>Track Location</string>
@@ -495,6 +504,14 @@
    </property>
    <property name="text">
     <string>Location &amp;Marker Manager</string>
+   </property>
+  </action>
+  <action name="actionRadarWireframe">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Radar &amp;Wireframe</string>
    </property>
   </action>
  </widget>

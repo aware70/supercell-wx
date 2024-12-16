@@ -19,6 +19,7 @@
 #include <scwx/qt/model/imgui_context_model.hpp>
 #include <scwx/qt/model/layer_model.hpp>
 #include <scwx/qt/settings/general_settings.hpp>
+#include <scwx/qt/settings/map_settings.hpp>
 #include <scwx/qt/settings/palette_settings.hpp>
 #include <scwx/qt/util/file.hpp>
 #include <scwx/qt/util/maplibre.hpp>
@@ -105,13 +106,16 @@ public:
       map::AlertLayer::InitializeHandler();
 
       auto& generalSettings = settings::GeneralSettings::Instance();
+      auto& mapSettings     = settings::MapSettings::Instance();
 
       // Initialize context
       context_->set_map_provider(
          GetMapProvider(generalSettings.map_provider().GetValue()));
       context_->set_overlay_product_view(overlayProductView);
 
+      // Initialize map data
       SetRadarSite(generalSettings.default_radar_site().GetValue());
+      smoothingEnabled_ = mapSettings.smoothing_enabled(id).GetValue();
 
       // Create ImGui Context
       static size_t currentMapId_ {0u};
@@ -225,7 +229,7 @@ public:
    std::shared_ptr<OverlayLayer>        overlayLayer_;
    std::shared_ptr<OverlayProductLayer> overlayProductLayer_ {nullptr};
    std::shared_ptr<PlacefileLayer>      placefileLayer_;
-   std::shared_ptr<MarkerLayer>            markerLayer_;
+   std::shared_ptr<MarkerLayer>         markerLayer_;
    std::shared_ptr<ColorTableLayer>     colorTableLayer_;
    std::shared_ptr<RadarSiteLayer>      radarSiteLayer_ {nullptr};
 
@@ -233,6 +237,7 @@ public:
 
    bool autoRefreshEnabled_;
    bool autoUpdateEnabled_;
+   bool smoothingEnabled_ {false};
 
    common::Level2Product selectedLevel2Product_;
 
@@ -727,6 +732,35 @@ std::uint16_t MapWidget::GetVcp() const
    }
 }
 
+bool MapWidget::GetRadarWireframeEnabled() const
+{
+   return p->context_->settings().radarWireframeEnabled_;
+}
+
+void MapWidget::SetRadarWireframeEnabled(bool wireframeEnabled)
+{
+   p->context_->settings().radarWireframeEnabled_ = wireframeEnabled;
+   QMetaObject::invokeMethod(
+      this, static_cast<void (QWidget::*)()>(&QWidget::update));
+}
+
+bool MapWidget::GetSmoothingEnabled() const
+{
+   return p->smoothingEnabled_;
+}
+
+void MapWidget::SetSmoothingEnabled(bool smoothingEnabled)
+{
+   p->smoothingEnabled_ = smoothingEnabled;
+
+   auto radarProductView = p->context_->radar_product_view();
+   if (radarProductView != nullptr)
+   {
+      radarProductView->set_smoothing_enabled(smoothingEnabled);
+      radarProductView->Update();
+   }
+}
+
 void MapWidget::SelectElevation(float elevation)
 {
    auto radarProductView = p->context_->radar_product_view();
@@ -775,6 +809,7 @@ void MapWidget::SelectRadarProduct(common::RadarProductGroup group,
 
       radarProductView = view::RadarProductViewFactory::Create(
          group, productName, productCode, p->radarProductManager_);
+      radarProductView->set_smoothing_enabled(p->smoothingEnabled_);
       p->context_->set_radar_product_view(radarProductView);
 
       p->RadarProductViewConnect();

@@ -12,6 +12,7 @@
 #include <scwx/qt/settings/audio_settings.hpp>
 #include <scwx/qt/settings/general_settings.hpp>
 #include <scwx/qt/settings/palette_settings.hpp>
+#include <scwx/qt/settings/product_settings.hpp>
 #include <scwx/qt/settings/settings_interface.hpp>
 #include <scwx/qt/settings/text_settings.hpp>
 #include <scwx/qt/settings/unit_settings.hpp>
@@ -136,6 +137,7 @@ public:
           &showMapAttribution_,
           &showMapCenter_,
           &showMapLogo_,
+          &showSmoothedRangeFolding_,
           &updateNotificationsEnabled_,
           &cursorIconAlwaysOn_,
           &debugEnabled_,
@@ -251,6 +253,7 @@ public:
    settings::SettingsInterface<bool>         showMapAttribution_ {};
    settings::SettingsInterface<bool>         showMapCenter_ {};
    settings::SettingsInterface<bool>         showMapLogo_ {};
+   settings::SettingsInterface<bool>         showSmoothedRangeFolding_ {};
    settings::SettingsInterface<bool>         updateNotificationsEnabled_ {};
    settings::SettingsInterface<bool>         cursorIconAlwaysOn_ {};
    settings::SettingsInterface<bool>         debugEnabled_ {};
@@ -527,21 +530,22 @@ void SettingsDialogImpl::SetupGeneralTab()
 {
    settings::GeneralSettings& generalSettings =
       settings::GeneralSettings::Instance();
-
+   settings::ProductSettings& productSettings =
+      settings::ProductSettings::Instance();
 
    QObject::connect(
-         self_->ui->themeComboBox,
-         &QComboBox::currentTextChanged,
-         self_,
-         [this](const QString& text)
-         {
-            types::UiStyle style = types::GetUiStyle(text.toStdString());
-            bool themeFileEnabled = style == types::UiStyle::FusionCustom;
+      self_->ui->themeComboBox,
+      &QComboBox::currentTextChanged,
+      self_,
+      [this](const QString& text)
+      {
+         const types::UiStyle style  = types::GetUiStyle(text.toStdString());
+         const bool themeFileEnabled = style == types::UiStyle::FusionCustom;
 
-            self_->ui->themeFileLineEdit->setEnabled(themeFileEnabled);
-            self_->ui->themeFileSelectButton->setEnabled(themeFileEnabled);
-            self_->ui->resetThemeFileButton->setEnabled(themeFileEnabled);
-         });
+         self_->ui->themeFileLineEdit->setEnabled(themeFileEnabled);
+         self_->ui->themeFileSelectButton->setEnabled(themeFileEnabled);
+         self_->ui->resetThemeFileButton->setEnabled(themeFileEnabled);
+      });
 
    theme_.SetSettingsVariable(generalSettings.theme());
    SCWX_SETTINGS_COMBO_BOX(theme_,
@@ -758,6 +762,11 @@ void SettingsDialogImpl::SetupGeneralTab()
 
    showMapLogo_.SetSettingsVariable(generalSettings.show_map_logo());
    showMapLogo_.SetEditWidget(self_->ui->showMapLogoCheckBox);
+
+   showSmoothedRangeFolding_.SetSettingsVariable(
+      productSettings.show_smoothed_range_folding());
+   showSmoothedRangeFolding_.SetEditWidget(
+      self_->ui->showSmoothedRangeFoldingCheckBox);
 
    updateNotificationsEnabled_.SetSettingsVariable(
       generalSettings.update_notifications_enabled());

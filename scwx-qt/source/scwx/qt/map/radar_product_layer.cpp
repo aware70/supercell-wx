@@ -1,11 +1,10 @@
 #include <scwx/qt/map/radar_product_layer.hpp>
+#include <scwx/qt/map/map_settings.hpp>
 #include <scwx/qt/gl/shader_program.hpp>
 #include <scwx/qt/util/maplibre.hpp>
 #include <scwx/qt/util/tooltip.hpp>
 #include <scwx/qt/view/radar_product_view.hpp>
 #include <scwx/util/logger.hpp>
-
-#include <execution>
 
 #if defined(_MSC_VER)
 #   pragma warning(push, 0)
@@ -267,6 +266,13 @@ void RadarProductLayer::Render(
    // Set OpenGL blend mode for transparency
    gl.glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+   const bool wireframeEnabled = context()->settings().radarWireframeEnabled_;
+   if (wireframeEnabled)
+   {
+      // Set polygon mode to draw wireframe
+      gl.glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+   }
+
    if (p->colorTableNeedsUpdate_)
    {
       UpdateColorTable();
@@ -302,6 +308,12 @@ void RadarProductLayer::Render(
    gl.glBindTexture(GL_TEXTURE_1D, p->texture_);
    gl.glBindVertexArray(p->vao_);
    gl.glDrawArrays(GL_TRIANGLES, 0, p->numVertices_);
+
+   if (wireframeEnabled)
+   {
+      // Restore polygon mode to default
+      gl.glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+   }
 
    SCWX_GL_CHECK_ERROR();
 }

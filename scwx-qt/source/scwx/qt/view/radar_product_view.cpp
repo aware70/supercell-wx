@@ -1,4 +1,5 @@
 #include <scwx/qt/view/radar_product_view.hpp>
+#include <scwx/qt/settings/product_settings.hpp>
 #include <scwx/common/constants.hpp>
 #include <scwx/util/logger.hpp>
 
@@ -28,26 +29,44 @@ class RadarProductViewImpl
 {
 public:
    explicit RadarProductViewImpl(
+      RadarProductView*                             self,
       std::shared_ptr<manager::RadarProductManager> radarProductManager) :
+       self_ {self},
        initialized_ {false},
        sweepMutex_ {},
        selectedTime_ {},
        radarProductManager_ {radarProductManager}
    {
+      auto& productSettings = settings::ProductSettings::Instance();
+      connection_           = productSettings.changed_signal().connect(
+         [this]()
+         {
+            showSmoothedRangeFolding_ = settings::ProductSettings::Instance()
+                                           .show_smoothed_range_folding()
+                                           .GetValue();
+            self_->Update();
+         });
+      ;
    }
    ~RadarProductViewImpl() {}
+
+   RadarProductView* self_;
 
    bool       initialized_;
    std::mutex sweepMutex_;
 
    std::chrono::system_clock::time_point selectedTime_;
+   bool                                  showSmoothedRangeFolding_ {false};
+   bool                                  smoothingEnabled_ {false};
 
    std::shared_ptr<manager::RadarProductManager> radarProductManager_;
+
+   boost::signals2::scoped_connection connection_;
 };
 
 RadarProductView::RadarProductView(
    std::shared_ptr<manager::RadarProductManager> radarProductManager) :
-    p(std::make_unique<RadarProductViewImpl>(radarProductManager)) {};
+    p(std::make_unique<RadarProductViewImpl>(this, radarProductManager)) {};
 RadarProductView::~RadarProductView() = default;
 
 const std::vector<boost::gil::rgba8_pixel_t>&
@@ -87,6 +106,16 @@ std::chrono::system_clock::time_point RadarProductView::selected_time() const
    return p->selectedTime_;
 }
 
+bool RadarProductView::show_smoothed_range_folding() const
+{
+   return p->showSmoothedRangeFolding_;
+}
+
+bool RadarProductView::smoothing_enabled() const
+{
+   return p->smoothingEnabled_;
+}
+
 std::chrono::system_clock::time_point RadarProductView::sweep_time() const
 {
    return {};
@@ -103,6 +132,11 @@ void RadarProductView::set_radar_product_manager(
    DisconnectRadarProductManager();
    p->radarProductManager_ = radarProductManager;
    ConnectRadarProductManager();
+}
+
+void RadarProductView::set_smoothing_enabled(bool smoothingEnabled)
+{
+   p->smoothingEnabled_ = smoothingEnabled;
 }
 
 void RadarProductView::Initialize()

@@ -13,8 +13,8 @@ layout (location = 2) in uint aCfpMoment;
 uniform mat4 uMVPMatrix;
 uniform vec2 uMapScreenCoord;
 
-flat out uint dataMoment;
-flat out uint cfpMoment;
+out float dataMoment;
+out float cfpMoment;
 
 vec2 latLngToScreenCoordinate(in vec2 latLng)
 {
