@@ -740,8 +740,10 @@ bool GeoLines::RunMousePicking(
                    units::length::nautical_miles<double> {line.di_->threshold_}
                       .value())) < 999 &&
 
-                // Map distance is beyond the threshold
-                line.di_->threshold_ < mapDistance) ||
+                // Map distance is beyond/within the threshold
+                line.di_->threshold_ < mapDistance &&
+                (line.di_->threshold_.value() >= 0.0 ||
+                 -(line.di_->threshold_) > mapDistance)) ||
 
              (
                 // Line has a start time
