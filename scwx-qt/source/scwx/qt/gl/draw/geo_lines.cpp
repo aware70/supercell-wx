@@ -230,12 +230,11 @@ void GeoLines::Initialize()
    gl.glEnableVertexAttribArray(6);
 
    // aDisplayed
-   gl.glVertexAttribPointer(7,
-                            1,
-                            GL_INT,
-                            GL_FALSE,
-                            kIntegersPerVertex_ * sizeof(GLint),
-                            reinterpret_cast<void*>(3 * sizeof(float)));
+   gl.glVertexAttribIPointer(7,
+                             1,
+                             GL_INT,
+                             kIntegersPerVertex_ * sizeof(GLint),
+                             reinterpret_cast<void*>(3 * sizeof(GLint)));
    gl.glEnableVertexAttribArray(7);
 
    p->dirty_ = true;
