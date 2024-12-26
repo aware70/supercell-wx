@@ -737,8 +737,10 @@ bool PlacefileIcons::RunMousePicking(
                    units::length::nautical_miles<double> {icon.di_->threshold_}
                       .value())) < 999 &&
 
-                // Map distance is beyond the threshold
-                icon.di_->threshold_ < mapDistance) ||
+                // Map distance is beyond/within the threshold
+                icon.di_->threshold_ < mapDistance &&
+                (icon.di_->threshold_.value() >= 0.0 ||
+                 -(icon.di_->threshold_) > mapDistance)) ||
 
              (
                 // Line has a start time
