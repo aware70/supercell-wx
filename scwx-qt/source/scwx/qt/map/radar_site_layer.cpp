@@ -1,5 +1,6 @@
 #include <scwx/qt/map/radar_site_layer.hpp>
 #include <scwx/qt/config/radar_site.hpp>
+#include <scwx/qt/settings/general_settings.hpp>
 #include <scwx/qt/settings/text_settings.hpp>
 #include <scwx/qt/util/maplibre.hpp>
 #include <scwx/qt/util/tooltip.hpp>
@@ -59,6 +60,18 @@ void RadarSiteLayer::Initialize()
 void RadarSiteLayer::Render(
    const QMapLibre::CustomLayerRenderParameters& params)
 {
+   p->hoverText_.clear();
+
+   auto mapDistance = util::maplibre::GetMapDistance(params);
+   auto threshold   = units::length::kilometers<double>(
+      settings::GeneralSettings::Instance().radar_site_threshold().GetValue());
+
+   if (!(threshold.value() == 0.0 || mapDistance <= threshold ||
+         (threshold.value() < 0 && mapDistance >= -threshold)))
+   {
+      return;
+   }
+
    gl::OpenGLFunctions& gl = context()->gl();
 
    context()->set_render_parameters(params);
@@ -72,8 +85,6 @@ void RadarSiteLayer::Render(
    p->mapBearingSin_ = sinf(params.bearing * common::kDegreesToRadians);
    p->halfWidth_     = params.width * 0.5f;
    p->halfHeight_    = params.height * 0.5f;
-
-   p->hoverText_.clear();
 
    // Radar site ImGui windows shouldn't have padding
    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2 {0.0f, 0.0f});

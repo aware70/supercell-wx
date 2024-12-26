@@ -78,6 +78,7 @@ public:
       updateNotificationsEnabled_.SetDefault(true);
       warningsProvider_.SetDefault(defaultWarningsProviderValue);
       cursorIconAlwaysOn_.SetDefault(false);
+      radarSiteThreshold_.SetDefault(0.0);
 
       fontSizes_.SetElementMinimum(1);
       fontSizes_.SetElementMaximum(72);
@@ -95,6 +96,8 @@ public:
       loopTime_.SetMaximum(1440);
       nmeaBaudRate_.SetMinimum(1);
       nmeaBaudRate_.SetMaximum(999999999);
+      radarSiteThreshold_.SetMinimum(-10000);
+      radarSiteThreshold_.SetMaximum(10000);
 
       customStyleDrawLayer_.SetTransform([](const std::string& value)
                                          { return boost::trim_copy(value); });
@@ -168,6 +171,7 @@ public:
    SettingsVariable<bool> updateNotificationsEnabled_ {"update_notifications"};
    SettingsVariable<std::string> warningsProvider_ {"warnings_provider"};
    SettingsVariable<bool>        cursorIconAlwaysOn_ {"cursor_icon_always_on"};
+   SettingsVariable<double>      radarSiteThreshold_ {"radar_site_threshold"};
 };
 
 GeneralSettings::GeneralSettings() :
@@ -201,7 +205,8 @@ GeneralSettings::GeneralSettings() :
                       &p->trackLocation_,
                       &p->updateNotificationsEnabled_,
                       &p->warningsProvider_,
-                      &p->cursorIconAlwaysOn_});
+                      &p->cursorIconAlwaysOn_,
+                      &p->radarSiteThreshold_});
    SetDefaults();
 }
 GeneralSettings::~GeneralSettings() = default;
@@ -356,6 +361,11 @@ SettingsVariable<bool>& GeneralSettings::cursor_icon_always_on() const
    return p->cursorIconAlwaysOn_;
 }
 
+SettingsVariable<double>& GeneralSettings::radar_site_threshold() const
+{
+   return p->radarSiteThreshold_;
+}
+
 bool GeneralSettings::Shutdown()
 {
    bool dataChanged = false;
@@ -406,7 +416,8 @@ bool operator==(const GeneralSettings& lhs, const GeneralSettings& rhs)
            lhs.p->updateNotificationsEnabled_ ==
               rhs.p->updateNotificationsEnabled_ &&
            lhs.p->warningsProvider_ == rhs.p->warningsProvider_ &&
-           lhs.p->cursorIconAlwaysOn_ == rhs.p->cursorIconAlwaysOn_);
+           lhs.p->cursorIconAlwaysOn_ == rhs.p->cursorIconAlwaysOn_ &&
+           lhs.p->radarSiteThreshold_ == rhs.p->radarSiteThreshold_);
 }
 
 } // namespace settings

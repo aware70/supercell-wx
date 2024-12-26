@@ -133,6 +133,7 @@ public:
           &nmeaBaudRate_,
           &nmeaSource_,
           &warningsProvider_,
+          &radarSiteThreshold_,
           &antiAliasingEnabled_,
           &showMapAttribution_,
           &showMapCenter_,
@@ -249,6 +250,7 @@ public:
    settings::SettingsInterface<std::string>  theme_ {};
    settings::SettingsInterface<std::string>  themeFile_ {};
    settings::SettingsInterface<std::string>  warningsProvider_ {};
+   settings::SettingsInterface<double>       radarSiteThreshold_ {};
    settings::SettingsInterface<bool>         antiAliasingEnabled_ {};
    settings::SettingsInterface<bool>         showMapAttribution_ {};
    settings::SettingsInterface<bool>         showMapCenter_ {};
@@ -749,6 +751,27 @@ void SettingsDialogImpl::SetupGeneralTab()
    warningsProvider_.SetResetButton(self_->ui->resetWarningsProviderButton);
    warningsProvider_.EnableTrimming();
 
+   radarSiteThreshold_.SetSettingsVariable(
+      generalSettings.radar_site_threshold());
+   radarSiteThreshold_.SetEditWidget(self_->ui->radarSiteThresholdSpinBox);
+   radarSiteThreshold_.SetResetButton(self_->ui->resetRadarSiteThresholdButton);
+   radarSiteThreshold_.SetUnitLabel(self_->ui->radarSiteThresholdUnitLabel);
+   auto radarSiteThresholdUpdateUnits = [this](const std::string& newValue)
+   {
+      const types::DistanceUnits radiusUnits =
+         types::GetDistanceUnitsFromName(newValue);
+      const double      radiusScale = types::GetDistanceUnitsScale(radiusUnits);
+      const std::string abbreviation =
+         types::GetDistanceUnitsAbbreviation(radiusUnits);
+
+      radarSiteThreshold_.SetUnit(radiusScale, abbreviation);
+   };
+   settings::UnitSettings::Instance()
+      .distance_units()
+      .RegisterValueStagedCallback(radarSiteThresholdUpdateUnits);
+   radarSiteThresholdUpdateUnits(
+      settings::UnitSettings::Instance().distance_units().GetValue());
+
    antiAliasingEnabled_.SetSettingsVariable(
       generalSettings.anti_aliasing_enabled());
    antiAliasingEnabled_.SetEditWidget(self_->ui->antiAliasingEnabledCheckBox);
@@ -1059,10 +1082,10 @@ void SettingsDialogImpl::SetupAudioTab()
    alertAudioRadius_.SetUnitLabel(self_->ui->alertAudioRadiusUnitsLabel);
    auto alertAudioRadiusUpdateUnits = [this](const std::string& newValue)
    {
-      types::DistanceUnits radiusUnits =
+      const types::DistanceUnits radiusUnits =
          types::GetDistanceUnitsFromName(newValue);
-      double      radiusScale = types::GetDistanceUnitsScale(radiusUnits);
-      std::string abbreviation =
+      const double      radiusScale = types::GetDistanceUnitsScale(radiusUnits);
+      const std::string abbreviation =
          types::GetDistanceUnitsAbbreviation(radiusUnits);
 
       alertAudioRadius_.SetUnit(radiusScale, abbreviation);

@@ -54,6 +54,7 @@ public:
    SettingsVariable<bool>&        update_notifications_enabled() const;
    SettingsVariable<std::string>& warnings_provider() const;
    SettingsVariable<bool>&        cursor_icon_always_on() const;
+   SettingsVariable<double>&      radar_site_threshold() const;
 
    static GeneralSettings& Instance();
 
